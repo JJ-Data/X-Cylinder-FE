@@ -1,6 +1,5 @@
-// @ts-expect-error - simplebar-react has type issues with exports
 import SimpleBarReact from 'simplebar-react'
-// @ts-expect-error - simplebar-react has type issues with exports
+
 import type { Props } from 'simplebar-react'
 import type SimpleBarCore from 'simplebar-core'
 import type { Ref } from 'react'
