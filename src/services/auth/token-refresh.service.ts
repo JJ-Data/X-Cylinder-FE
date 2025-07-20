@@ -1,4 +1,5 @@
 import authApiClient from './auth-api-client'
+import appConfig from '@/configs/app.config'
 import type { AxiosError, InternalAxiosRequestConfig, AxiosInstance } from 'axios'
 
 interface RefreshResponse {
@@ -12,6 +13,43 @@ interface RefreshResponse {
 class TokenRefreshService {
   private isRefreshing = false
   private refreshSubscribers: Array<(token: string) => void> = []
+
+  /**
+   * Handle logout when refresh token expires
+   * This properly cleans up both backend and NextAuth sessions
+   */
+  private async handleSessionExpiry(): Promise<void> {
+    try {
+      // Show user notification about session expiry
+      if (typeof window !== 'undefined') {
+        const { default: toast } = await import('@/components/ui/toast')
+        const { default: Notification } = await import('@/components/ui/Notification')
+        const { createElement } = await import('react')
+        
+        toast.push(
+          createElement(Notification, {
+            title: 'Session Expired',
+            type: 'warning',
+            duration: 5000,
+            children: 'Your session has expired. Please sign in again.'
+          }),
+          {
+            placement: 'top-center',
+          }
+        )
+      }
+
+      // Dynamically import to avoid circular dependencies
+      const { default: handleSignOut } = await import('@/server/actions/auth/handleSignOut')
+      await handleSignOut()
+    } catch (error) {
+      console.error('Error during session expiry logout:', error)
+      // Fallback to simple redirect if handleSignOut fails
+      if (typeof window !== 'undefined') {
+        window.location.href = appConfig.unAuthenticatedEntryPath
+      }
+    }
+  }
 
   /**
    * Refresh the access token using the refresh token
@@ -69,17 +107,13 @@ class TokenRefreshService {
         // Retry the original request
         return axiosInstance(originalRequest)
       } else {
-        // Refresh failed, redirect to login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login'
-        }
+        // Refresh failed, handle session expiry with proper cleanup
+        await this.handleSessionExpiry()
         return Promise.reject(error)
       }
     } catch (refreshError) {
-      // Refresh failed
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+      // Refresh failed, handle session expiry with proper cleanup
+      await this.handleSessionExpiry()
       return Promise.reject(refreshError)
     } finally {
       this.isRefreshing = false

@@ -65,7 +65,7 @@ const Day = (props: DayProps) => {
         ref,
         renderDay,
         disabled,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+         
         fullWidth,
         ...others
     } = props

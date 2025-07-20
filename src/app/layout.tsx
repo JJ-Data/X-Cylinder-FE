@@ -1,4 +1,3 @@
-import { auth } from '@/auth'
 import AuthProvider from '@/components/auth/AuthProvider'
 import ThemeProvider from '@/components/template/Theme/ThemeProvider'
 import pageMetaConfig from '@/configs/page-meta.config'
@@ -17,8 +16,6 @@ export default async function RootLayout({
 }: Readonly<{
     children: ReactNode
 }>) {
-    const session = await auth()
-
     const navigationTree = await getNavigation()
 
     const theme = await getTheme()
@@ -30,7 +27,7 @@ export default async function RootLayout({
             suppressHydrationWarning
         >
             <body suppressHydrationWarning>
-                <AuthProvider session={session}>
+                <AuthProvider>
                     <ThemeProvider theme={theme}>
                         <NavigationProvider navigationTree={navigationTree}>
                             {children}

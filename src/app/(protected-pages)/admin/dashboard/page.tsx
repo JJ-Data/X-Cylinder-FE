@@ -32,11 +32,19 @@ import {
 import { useRouter } from 'next/navigation'
 import { subDays, format } from 'date-fns'
 import type { ActivityItem } from '@/components/analytics/ActivityFeed'
+import { validateEnvironmentVariables } from '@/utils/validateEnv'
 
 export default function AdminDashboard() {
-    const { data: session, status } = useSession()
+    const { data: session, status, update } = useSession()
     const { activeRole: _activeRole } = useAuthStore()
-    const { data: metrics, error, isLoading } = useDashboardMetrics()
+    const [tokenCheckAttempts, setTokenCheckAttempts] = useState(0)
+    const [sessionError, setSessionError] = useState<string | null>(null)
+    
+    // Enhanced session state tracking
+    const accessToken = (session as any)?.accessToken
+    const hasValidSession = status === 'authenticated' && session && accessToken
+    
+    const { data: metrics, error, isLoading, mutate: refreshMetrics } = useDashboardMetrics()
     
     // Provide default date range for revenue analytics (last 30 days)
     const defaultDateRange = useMemo(() => ({
@@ -48,9 +56,36 @@ export default function AdminDashboard() {
     const [isMounted, setIsMounted] = useState(false)
     const router = useRouter()
 
+    // Track session and metrics state changes
+    useEffect(() => {
+        // State tracking removed for production
+    }, [session, status, error, isLoading, metrics, accessToken, tokenCheckAttempts])
+
     useEffect(() => {
         setIsMounted(true)
+        
+        // Validate environment on mount
+        const envValidation = validateEnvironmentVariables()
+        // Environment validation check removed for production
+        
     }, [])
+    
+    // Retry logic for session token availability
+    useEffect(() => {
+        if (status === 'authenticated' && session && !accessToken && tokenCheckAttempts < 5) {
+            const timeout = setTimeout(async () => {
+                // Force session update to get latest token
+                await update()
+                setTokenCheckAttempts(prev => prev + 1)
+            }, 1000) // Wait 1 second between retries
+            
+            return () => clearTimeout(timeout)
+        }
+        
+        if (tokenCheckAttempts >= 5 && !accessToken) {
+            setSessionError('Failed to retrieve access token after multiple attempts. Please try signing out and back in.')
+        }
+    }, [status, session, accessToken, tokenCheckAttempts, update])
 
     // Convert recent activity to ActivityItem format
     const recentActivities = useMemo<ActivityItem[]>(() => {
@@ -134,10 +169,77 @@ export default function AdminDashboard() {
         )
     }
 
-    // Ensure we have a session before rendering
-    if (status === 'authenticated' && !session) {
-        return null
+    // Only show loading for access token if we're in the first few attempts
+    if (status === 'authenticated' && !accessToken && tokenCheckAttempts < 2) {
+        return (
+            <Container>
+                <div className="flex flex-col items-center justify-center min-h-[400px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
+                    <p className="text-gray-600">Initializing dashboard...</p>
+                </div>
+            </Container>
+        )
     }
+    
+    // Show session error if token check failed
+    if (sessionError) {
+        return (
+            <Container>
+                <Alert type="danger" className="mb-6">
+                    <div>
+                        <p className="font-semibold">Session Error</p>
+                        <p className="text-sm mt-1">{sessionError}</p>
+                        <div className="flex gap-2 mt-3">
+                            <Button
+                                size="sm"
+                                variant="solid"
+                                onClick={() => {
+                                    setTokenCheckAttempts(0)
+                                    setSessionError(null)
+                                    update()
+                                }}
+                            >
+                                Retry
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="plain"
+                                onClick={() => router.push('/sign-in')}
+                            >
+                                Sign In Again
+                            </Button>
+                        </div>
+                    </div>
+                </Alert>
+            </Container>
+        )
+    }
+
+    // Check for authentication issues
+    if (status === 'authenticated' && !session) {
+        return (
+            <Container>
+                <Alert type="danger">
+                    Authentication error: No session data available. Please sign in again.
+                </Alert>
+            </Container>
+        )
+    }
+
+    // Check for role authorization
+    const userRole = session?.user?.role
+    const hasAdminRole = userRole === 'ADMIN' || session?.user?.authority?.includes('ADMIN')
+    
+    if (status === 'authenticated' && !hasAdminRole) {
+        return (
+            <Container>
+                <Alert type="danger">
+                    Access Denied: You do not have permission to view this page. Required role: ADMIN, Your role: {userRole}
+                </Alert>
+            </Container>
+        )
+    }
+
 
     return (
         <Container>
@@ -174,13 +276,75 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Error State */}
+            {/* Enhanced Error State with debugging info */}
             {error && (
                 <Alert type="danger" className="mb-6">
-                    Failed to load dashboard metrics. Please try again later.
+                    <div>
+                        <p className="font-semibold">Failed to load dashboard metrics</p>
+                        <p className="text-sm mt-1">Error: {error.message || 'Unknown error occurred'}</p>
+                        {process.env.NODE_ENV === 'development' && (
+                            <details className="mt-2">
+                                <summary className="cursor-pointer text-sm font-medium">Debug Information</summary>
+                                <pre className="text-xs mt-1 p-2 bg-gray-100 rounded overflow-auto">
+                                    {JSON.stringify({
+                                        errorDetails: error,
+                                        sessionStatus: status,
+                                        hasAccessToken: !!accessToken,
+                                        apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'Not set'
+                                    }, null, 2)}
+                                </pre>
+                            </details>
+                        )}
+                        <div className="flex gap-2 mt-3">
+                            <Button
+                                size="sm"
+                                variant="solid"
+                                onClick={() => refreshMetrics()}
+                            >
+                                Retry Request
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="plain"
+                                onClick={() => window.location.reload()}
+                            >
+                                Reload Page
+                            </Button>
+                        </div>
+                    </div>
                 </Alert>
             )}
 
+            {/* Loading State for Metrics */}
+            {isLoading && !metrics && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
+                        <p>Loading dashboard metrics...</p>
+                    </div>
+                </div>
+            )}
+            
+            {/* Empty State */}
+            {!isLoading && !error && !metrics && (
+                <Alert type="info" className="mb-6">
+                    <p>No metrics data available. This might be due to:</p>
+                    <ul className="list-disc list-inside mt-2 text-sm">
+                        <li>First time loading the dashboard</li>
+                        <li>Backend service is starting up</li>
+                        <li>Network connectivity issues</li>
+                    </ul>
+                    <Button
+                        size="sm"
+                        variant="solid"
+                        className="mt-3"
+                        onClick={() => refreshMetrics()}
+                    >
+                        Refresh Dashboard
+                    </Button>
+                </Alert>
+            )}
+            
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <MetricCard

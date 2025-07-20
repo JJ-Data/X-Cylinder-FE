@@ -97,7 +97,7 @@ const DateTimepicker = (props: DateTimepickerProps) => {
 
     const inputRef = useRef<HTMLInputElement>(null)
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const [_, setLastValidValue] = useState(defaultValue ?? null)
     const [_value, setValue] = useControllableState({
         prop: value,

@@ -16,22 +16,50 @@ const isServer = typeof window === 'undefined'
 
 // Sign in with email and password
 export async function apiSignIn(data: SignInCredential) {
+    console.log('[apiSignIn] Starting with isServer:', isServer)
+    console.log('[apiSignIn] Environment check:', {
+        backendApiUrl: process.env.BACKEND_API_URL,
+        nextPublicApiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+        hasWindow: typeof window !== 'undefined'
+    })
+    
     // For server-side calls (like in validateCredential), use AxiosServer directly
     if (isServer) {
+        console.log('[apiSignIn] Using server-side AxiosServer for direct backend call')
         try {
             const response = await AxiosServer.post<SignInResponse>('/auth/login', data)
+            console.log('[apiSignIn Server] Response received:', {
+                status: response.status,
+                statusText: response.statusText,
+                hasData: !!response.data,
+                dataSuccess: response.data?.success,
+                dataKeys: response.data ? Object.keys(response.data) : 'No data'
+            })
             return response.data
         } catch (error: any) {
-            console.error('[apiSignIn Server Error]', error.response?.data || error.message)
+            console.error('[apiSignIn Server Error] Request failed:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                message: error.message,
+                url: error.config?.url,
+                baseURL: error.config?.baseURL
+            })
             throw error
         }
     }
     
     // For client-side calls, use the proxy
+    console.log('[apiSignIn] Using client-side proxy call')
     const response = await ApiService.fetchDataWithAxios<SignInResponse>({
         url: '/auth/login',
         method: 'post',
         data,
+    })
+    
+    console.log('[apiSignIn Client] Response received via proxy:', {
+        success: response?.success,
+        hasData: !!response?.data
     })
     
     return response

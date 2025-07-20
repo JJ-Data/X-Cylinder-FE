@@ -1,6 +1,8 @@
 import useSWRMutation from 'swr/mutation'
 import { transferService } from '@/services/api/transfer.service'
-import { toast } from 'react-hot-toast'
+import React from 'react'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 import type { TransferFormData } from '@/types/transfer'
 
 // Transfer mutations hook
@@ -13,10 +15,20 @@ export const useTransferMutations = () => {
     },
     {
       onSuccess: () => {
-        toast.success('Transfer created successfully')
+        toast.push(
+          React.createElement(Notification, {
+            title: 'Success',
+            type: 'success'
+          }, 'Transfer created successfully')
+        )
       },
       onError: (error: any) => {
-        toast.error(error.message || 'Failed to create transfer')
+        toast.push(
+          React.createElement(Notification, {
+            title: 'Error',
+            type: 'danger'
+          }, error.message || 'Failed to create transfer')
+        )
       }
     }
   )

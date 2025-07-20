@@ -2,7 +2,9 @@ import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 import { outletService } from '@/services/api/outlet.service'
 import type { OutletFilters } from '@/types/outlet'
-import { toast } from 'react-hot-toast'
+import React from 'react'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 
 // Get outlets with filters
 export function useOutlets(filters?: OutletFilters) {
@@ -52,7 +54,12 @@ export function useOutletMutations() {
     'outlets',
     async (_key, { arg }: { arg: any }) => {
       const result = await outletService.createOutlet(arg)
-      toast.success('Outlet created successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Outlet created successfully')
+      )
       return result
     }
   )
@@ -61,7 +68,12 @@ export function useOutletMutations() {
     'outlets',
     async (_key, { arg }: { arg: { id: number; data: any } }) => {
       const result = await outletService.updateOutlet(arg.id, arg.data)
-      toast.success('Outlet updated successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Outlet updated successfully')
+      )
       return result
     }
   )
@@ -70,7 +82,12 @@ export function useOutletMutations() {
     'outlets',
     async (_key, { arg }: { arg: number }) => {
       await outletService.deactivateOutlet(arg)
-      toast.success('Outlet deactivated successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Outlet deactivated successfully')
+      )
     }
   )
 

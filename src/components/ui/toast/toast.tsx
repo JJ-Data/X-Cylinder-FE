@@ -37,7 +37,7 @@ function castPlacment(placement: NotificationPlacement) {
 async function createWrapper(wrapperId: string, props: ToastProps) {
     const [wrapper] = (await ToastWrapper.getInstance(
         props as ToastWrapperProps,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
     )) as any
 
     wrappers.set(wrapperId || defaultWrapperId, wrapper)

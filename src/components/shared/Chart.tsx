@@ -23,7 +23,7 @@ export interface ChartProps {
     series?: ApexOptions['series']
     width?: string | number
     height?: string | number
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     xAxis?: any
     customOptions?: ApexOptions
     type?: ChartType

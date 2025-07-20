@@ -2,7 +2,9 @@ import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 import { leaseService, type LeaseFilters } from '@/services/api/lease.service'
 import { mutate } from 'swr'
-import { toast } from 'react-hot-toast'
+import React from 'react'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 
 // Get leases with filters
 export const useLeases = (filters?: LeaseFilters) => {
@@ -96,7 +98,12 @@ export const useLeaseMutations = () => {
       // Revalidate leases list
       await mutate((key: any) => Array.isArray(key) && key[0] === 'leases')
       await mutate(['customer-active-leases', arg.customerId])
-      toast.success('Lease created successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Lease created successfully')
+      )
       return result
     }
   )
@@ -110,7 +117,12 @@ export const useLeaseMutations = () => {
       await mutate((key: any) => Array.isArray(key) && key[0] === 'leases')
       await mutate((key: any) => Array.isArray(key) && key[0] === 'customer-active-leases')
       await mutate((key: any) => Array.isArray(key) && key[0] === 'overdue-leases')
-      toast.success('Lease returned successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Lease returned successfully')
+      )
       return result
     }
   )

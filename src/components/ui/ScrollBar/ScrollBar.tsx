@@ -1,5 +1,7 @@
+// @ts-expect-error Missing types for simplebar-react
 import SimpleBarReact from 'simplebar-react'
 
+// @ts-expect-error Missing types for simplebar-react
 import type { Props } from 'simplebar-react'
 import type SimpleBarCore from 'simplebar-core'
 import type { Ref } from 'react'

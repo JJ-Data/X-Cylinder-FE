@@ -27,7 +27,7 @@ export interface UploadProps extends CommonProps {
 }
 
 const filesToArray = (files: File[]) =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     Object.keys(files).map((key) => files[key as any])
 
 const Upload = (props: UploadProps) => {

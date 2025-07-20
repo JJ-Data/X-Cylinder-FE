@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { useEffect, useCallback, useRef } from 'react'
 import type { RefObject, ReactEventHandler } from 'react'
 

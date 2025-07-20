@@ -16,7 +16,7 @@ export interface ThumbProps extends Omit<ComponentProps<'div'>, 'value'> {
     dragging: boolean
     tooltip: ReactNode
     onKeyDownCapture?: (event: KeyboardEvent<HTMLDivElement>) => void
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     onMouseDown?: (event: any) => void
     alwaysShowTooltip: boolean | undefined
     thumbAriaLabel: string | undefined

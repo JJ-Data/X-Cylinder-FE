@@ -26,7 +26,7 @@ import type {
 
 export type RangeSliderValue = [number, number]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function getClientPosition(event: any) {
     if ('TouchEvent' in window && event instanceof window.TouchEvent) {
         const touch = event.touches[0]

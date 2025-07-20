@@ -6,7 +6,7 @@ import type { AxiosError } from 'axios'
 const AxiosBase = axios.create({
     timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 60000,
     baseURL: '/api/proxy', // Use our proxy endpoint
-    withCredentials: true, // Enable cookies for HTTP-only authentication
+    // No longer need withCredentials since we're using Bearer tokens
 })
 
 AxiosBase.interceptors.request.use(

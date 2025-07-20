@@ -1,52 +1,69 @@
 'use server'
 
 import { signIn } from '@/auth'
-import { getRoleBasedPath } from '@/configs/app.config'
+import appConfig from '@/configs/app.config'
 import { AuthError } from 'next-auth'
-import validateCredential from '../user/validateCredential'
 import type { SignInCredential } from '@/@types/auth'
+import { sanitizeCallbackUrl } from '@/utils/route-validation'
 
 export const onSignInWithCredentials = async (
     { email, password }: SignInCredential,
     callbackUrl?: string,
 ) => {
+    console.log('[handleSignIn] Starting sign-in process', {
+        email,
+        hasPassword: !!password,
+        callbackUrl,
+        timestamp: new Date().toISOString(),
+    })
+    
     try {
-        // Note: We're now authenticating via client-side first to set cookies
-        // The validateCredential call here is to get user info for NextAuth session
-        const user = await validateCredential({ email, password })
-        if (!user) {
-            return { error: 'Invalid credentials!' }
-        }
-        
-        // Determine redirect URL
-        let redirectTo = callbackUrl
-        
-        // If callback URL is root, empty, or not provided, use role-based redirect
-        if (!redirectTo || redirectTo === '/' || redirectTo === '') {
-            const role = user.role?.toLowerCase() || 'customer'
-            redirectTo = getRoleBasedPath(role)
-            console.log('[SignIn] Role-based redirect:', { role, redirectTo })
-        }
-        
-        await signIn('credentials', {
-            email,
-            password,
-            redirect: false, // Don't let NextAuth handle the redirect
+        console.log('[handleSignIn] Calling NextAuth signIn with:', {
+            authURL: process.env.AUTH_URL,
+            authSecret: process.env.AUTH_SECRET ? 'set' : 'missing',
         })
         
-        // Return success with the redirect URL
-        return { success: true, redirectTo }
+        // Call NextAuth signIn without redirect
+        const result = await signIn('credentials', {
+            email,
+            password,
+            redirect: false,
+        })
+        
+        console.log('[handleSignIn] Sign-in result:', result)
+        
+        // Sanitize and validate the callback URL
+        const sanitizedRedirectUrl = sanitizeCallbackUrl(callbackUrl)
+        
+        console.log('[handleSignIn] URL validation result:', {
+            originalCallbackUrl: callbackUrl,
+            sanitizedRedirectUrl,
+            isCallbackValid: callbackUrl === sanitizedRedirectUrl
+        })
+        
+        return { 
+            success: true, 
+            redirectTo: sanitizedRedirectUrl
+        }
+        
     } catch (error) {
+        console.error('[handleSignIn] Sign-in error:', {
+            error,
+            errorType: error instanceof AuthError ? 'AuthError' : 'Unknown',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: new Date().toISOString(),
+        })
+        
         if (error instanceof AuthError) {
-            /** Customize error message based on AuthError */
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            switch ((error.type as any).type) {
+            // Handle authentication errors
+            switch ((error as any).type) {
                 case 'CredentialsSignin':
                     return { error: 'Invalid credentials!' }
                 default:
                     return { error: 'Something went wrong!' }
             }
         }
-        throw error
+        
+        return { error: 'Authentication error occurred' }
     }
 }

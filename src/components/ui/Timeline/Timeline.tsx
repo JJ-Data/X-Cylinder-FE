@@ -15,7 +15,7 @@ const Timeline = (props: TimelineProps) => {
 
     const items = mapCloneElement(
         children,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (item: DetailedReactHTMLElement<any, HTMLElement>, index: number) => ({
             isLast: index === count - 1,
             ...item.props,

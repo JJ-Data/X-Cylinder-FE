@@ -9,7 +9,9 @@ import type {
   CustomerActivationDto
 } from '@/types/user'
 import { mutate } from 'swr'
-import { toast } from 'react-hot-toast'
+import React from 'react'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 
 // Fetch users with filters
 export function useUsers(filters?: UserFilters) {
@@ -51,7 +53,12 @@ export function useUserMutations() {
     async (_, { arg }: { arg: CreateUserDto }) => {
       const response = await userService.createUser(arg)
       await mutate(['users'])
-      toast.success('User created successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'User created successfully')
+      )
       return response.data
     }
   )
@@ -63,7 +70,12 @@ export function useUserMutations() {
       const response = await userService.updateUser(arg.id, arg.data)
       await mutate(['users'])
       await mutate(['user', arg.id])
-      toast.success('User updated successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'User updated successfully')
+      )
       return response.data
     }
   )
@@ -75,7 +87,12 @@ export function useUserMutations() {
       const response = await userService.toggleUserStatus(arg)
       await mutate(['users'])
       await mutate(['user', arg])
-      toast.success('User status updated')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'User status updated')
+      )
       return response.data
     }
   )
@@ -86,7 +103,12 @@ export function useUserMutations() {
     async (_, { arg }: { arg: number }) => {
       const response = await userService.deleteUser(arg)
       await mutate(['users'])
-      toast.success('User deleted successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'User deleted successfully')
+      )
       return response.data
     }
   )
@@ -96,7 +118,12 @@ export function useUserMutations() {
     'change-password',
     async (_, { arg }: { arg: { id: number; newPassword: string } }) => {
       const response = await userService.changeUserPassword(arg.id, arg.newPassword)
-      toast.success('Password changed successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Password changed successfully')
+      )
       return response.data
     }
   )
@@ -118,7 +145,12 @@ export function useCustomerMutations() {
     async (_, { arg }: { arg: CustomerRegistrationDto }) => {
       const response = await customerService.registerCustomer(arg)
       await mutate(['users'])
-      toast.success('Customer registered successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Customer registered successfully')
+      )
       return response.data
     }
   )
@@ -130,7 +162,12 @@ export function useCustomerMutations() {
       const response = await customerService.activateCustomer(arg)
       await mutate(['users'])
       await mutate(['user', arg.userId])
-      toast.success('Customer activated successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Customer activated successfully')
+      )
       return response.data
     }
   )
@@ -142,7 +179,12 @@ export function useCustomerMutations() {
       const response = await customerService.simulatePayment(arg.userId, arg.amount)
       await mutate(['users'])
       await mutate(['user', arg.userId])
-      toast.success('Payment simulated successfully')
+      toast.push(
+        React.createElement(Notification, {
+          title: 'Success',
+          type: 'success'
+        }, 'Payment simulated successfully')
+      )
       return response.data
     }
   )

@@ -53,7 +53,7 @@ const AvatarGroup = (props: AvatarGroupProps) => {
     const childCount = Children.count(children)
 
     const childWithKey = Children.toArray(children).map((child, index) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         cloneElement(child as ReactElement<any>, {
             key: `grouped-avatar-${index}`,
         }),

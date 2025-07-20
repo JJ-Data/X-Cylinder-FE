@@ -26,7 +26,7 @@ const OTPInput = ({
     placeholder,
     invalid = false,
 }: OTPInputProps) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const [_, setActiveInput] = useState<number>(0)
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 

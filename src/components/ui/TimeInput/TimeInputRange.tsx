@@ -32,9 +32,9 @@ export interface TimeInputRangeProps extends CommonProps {
     timeFieldPlaceholder?: string
     timeFieldClass?: string
     value?: Value
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     field?: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     form?: any
 }
 

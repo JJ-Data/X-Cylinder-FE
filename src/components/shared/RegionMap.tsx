@@ -22,7 +22,7 @@ type MapDataProp = {
 
 type RegionMapProps = {
     data: MapDataProp
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mapSource?: string | Record<string, any> | string[]
     valueSuffix?: string
     valuePrefix?: string

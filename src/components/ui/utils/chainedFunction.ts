@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 export default function chainedFunction<T = any>(...funcs: (T | null)[]) {
     return funcs
         .filter((f) => f !== null && typeof f !== 'undefined')

@@ -7,7 +7,7 @@ function isMarkFilled({
     offset,
     value,
 }: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     mark: { value: number; label?: any }
     offset?: number
     value: number

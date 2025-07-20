@@ -32,5 +32,5 @@ export interface NavigationTree {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export type TranslationFn = any

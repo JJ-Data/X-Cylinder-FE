@@ -4,7 +4,8 @@ import {
     publicRoutes as _publicRoutes,
 } from '@/configs/routes.config'
 import { REDIRECT_URL_KEY } from '@/constants/app.constant'
-import appConfig from '@/configs/app.config'
+import appConfig, { getRoleBasedPath } from '@/configs/app.config'
+import { isValidRoute } from '@/utils/route-validation'
 
 const publicRoutes = Object.entries(_publicRoutes).map(([key]) => key)
 const authRoutes = Object.entries(_authRoutes).map(([key]) => key)
@@ -15,10 +16,16 @@ export default auth((req) => {
     const { nextUrl } = req
     const isSignedIn = !!req.auth
 
-    console.log('[Middleware]', {
+    console.log('[Middleware] Request:', {
         path: nextUrl.pathname,
         isSignedIn,
+        auth: req.auth,
         user: req.auth?.user,
+        cookies: req.cookies?.getAll().map(c => ({ name: c.name, value: c.value ? 'present' : 'missing' })),
+        headers: {
+            cookie: req.headers.get('cookie') ? 'present' : 'missing',
+            authorization: req.headers.get('authorization') ? 'present' : 'missing',
+        }
     })
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix)
@@ -40,9 +47,18 @@ export default auth((req) => {
 
     if (isAuthRoute) {
         if (isSignedIn) {
-            /** Redirect to authenticated entry path if signed in & path is auth route */
+            /** Redirect to role-based path if signed in & path is auth route */
+            const userRole = req.auth?.user?.role || 'customer'
+            const roleBasedPath = getRoleBasedPath(userRole)
+            
+            console.log('[Middleware] Redirecting authenticated user from auth route:', {
+                userRole,
+                roleBasedPath,
+                timestamp: new Date().toISOString(),
+            })
+            
             return Response.redirect(
-                new URL(appConfig.authenticatedEntryPath, nextUrl),
+                new URL(roleBasedPath, nextUrl),
             )
         }
         return
@@ -55,11 +71,23 @@ export default auth((req) => {
             callbackUrl += nextUrl.search
         }
 
+        // Only include callback URL if it's a valid route
+        // This prevents redirecting back to invalid/non-existent routes
+        const shouldIncludeCallback = isValidRoute(nextUrl.pathname)
+        const redirectUrl = shouldIncludeCallback 
+            ? `${appConfig.unAuthenticatedEntryPath}?${REDIRECT_URL_KEY}=${encodeURIComponent(callbackUrl)}`
+            : appConfig.unAuthenticatedEntryPath
+
+        console.log('[Middleware] Redirecting to sign-in:', {
+            originalPath: nextUrl.pathname,
+            callbackUrl,
+            shouldIncludeCallback,
+            redirectUrl,
+            timestamp: new Date().toISOString(),
+        })
+
         return Response.redirect(
-            new URL(
-                `${appConfig.unAuthenticatedEntryPath}?${REDIRECT_URL_KEY}=${callbackUrl}`,
-                nextUrl,
-            ),
+            new URL(redirectUrl, nextUrl),
         )
     }
 

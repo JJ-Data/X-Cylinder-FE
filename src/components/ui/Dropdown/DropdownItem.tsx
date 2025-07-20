@@ -23,7 +23,7 @@ export interface DropdownItemProps extends CommonProps {
     asElement?: ElementType
     active?: boolean
     disabled?: boolean
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     submenu?: ReactElement<any>
     eventKey?: string
     onSelect?: (eventKey: string, e: SyntheticEvent) => void

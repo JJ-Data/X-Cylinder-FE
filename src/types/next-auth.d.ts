@@ -9,6 +9,7 @@ declare module 'next-auth' {
             status: 'PENDING' | 'ACTIVE' | 'INACTIVE'
             authority: string[]
         } & DefaultSession['user']
+        accessToken?: string
     }
 
     interface User {
@@ -17,6 +18,7 @@ declare module 'next-auth' {
         role?: 'CUSTOMER' | 'STAFF' | 'OPERATOR' | 'ADMIN'
         outletId?: string
         status?: 'PENDING' | 'ACTIVE' | 'INACTIVE'
+        accessToken?: string
     }
 }
 
@@ -26,5 +28,6 @@ declare module 'next-auth/jwt' {
         role?: string
         outletId?: string
         status?: string
+        accessToken?: string
     }
 }

@@ -1,9 +1,9 @@
 import { Metadata } from 'next'
 
 const pageMeta: Metadata = {
-    title: 'Ecme - The Ultimate Next & TypeScript Web Template',
+    title: 'CylinderX - Gas Cylinder Leasing and Refill Management Platform',
     description:
-        'Admin Template and Starter Kit with React, Tailwind Components and Next.js',
+        'CylinderX is a comprehensive platform for managing gas cylinder leasing and refilling, ensuring safety and efficiency.',
     icons: {
         icon: '/favicon.ico',
     },

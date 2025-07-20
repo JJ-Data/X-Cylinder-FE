@@ -4,8 +4,7 @@ import SignIn from '@/components/auth/SignIn'
 import { onSignInWithCredentials } from '@/server/actions/auth/handleSignIn'
 import handleOauthSignIn from '@/server/actions/auth/handleOauthSignIn'
 import { REDIRECT_URL_KEY } from '@/constants/app.constant'
-import { useSearchParams } from 'next/navigation'
-import { clientSignIn } from '@/services/clientAuth'
+import { useSearchParams, useRouter } from 'next/navigation'
 import type {
     OnSignInPayload,
     OnOauthSignInPayload,
@@ -13,6 +12,7 @@ import type {
 
 const SignInClient = () => {
     const searchParams = useSearchParams()
+    const router = useRouter()
     const callbackUrl = searchParams.get(REDIRECT_URL_KEY)
 
     const handleSignIn = async ({
@@ -23,32 +23,20 @@ const SignInClient = () => {
         setSubmitting(true)
 
         try {
-            // Make a client-side login request first to set backend cookies
-            const loginResponse = await clientSignIn(values)
+            const data = await onSignInWithCredentials(values, callbackUrl || '')
             
-            if (loginResponse.success) {
-                // Backend cookies should now be set
-                // Establish NextAuth session
-                const data = await onSignInWithCredentials(values, callbackUrl || undefined)
-                
-                if (data?.error) {
-                    setMessage(data.error as string)
-                    setSubmitting(false)
-                } else if (data?.success && data?.redirectTo) {
-                    // Use window.location for a hard refresh to ensure proper page load
-                    window.location.href = data.redirectTo
-                }
-            } else {
-                setMessage(loginResponse.message || 'Invalid credentials')
+            if (data?.error) {
+                setMessage(data.error as string)
                 setSubmitting(false)
+            } else if (data?.success && data?.redirectTo) {
+                // Use window.location.href for full page navigation
+                // This ensures the session is properly loaded
+                console.log('[SignInClient] Sign-in successful, redirecting to:', data.redirectTo)
+                window.location.href = data.redirectTo
             }
-        } catch (error: any) {
-            console.error('[Sign In Error]', error)
-            const errorMessage = error.response?.data?.message || 
-                               error.response?.data?.error || 
-                               error.message || 
-                               'Invalid credentials'
-            setMessage(errorMessage)
+        } catch (error) {
+            console.error('[SignInClient] Error during sign-in:', error)
+            setMessage('An error occurred during sign-in')
             setSubmitting(false)
         }
     }

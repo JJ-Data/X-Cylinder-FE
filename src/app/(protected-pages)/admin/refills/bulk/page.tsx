@@ -25,7 +25,8 @@ import Badge from '@/components/ui/Badge'
 import Alert from '@/components/ui/Alert'
 import Container from '@/components/shared/Container'
 import FormItem from '@/components/ui/Form/FormItem'
-import toast from 'react-hot-toast'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 import { refillService } from '@/services/api/refill.service'
 import { formatCurrency } from '@/utils/format'
 
@@ -129,7 +130,11 @@ export default function BulkRefillPage() {
         if (fields.length > 1) {
             remove(index)
         } else {
-            toast.error('At least one refill entry is required')
+            toast.push(
+                <Notification title="Error" type="danger">
+                    At least one refill entry is required
+                </Notification>
+            )
         }
     }
 
@@ -138,7 +143,11 @@ export default function BulkRefillPage() {
             const { volumeAdded } = calculateRefillDetails(index)
             setValue(`refills.${index}.refillCost`, volumeAdded * defaultUnitPrice)
         })
-        toast.success('Default price applied to all entries')
+        toast.push(
+            <Notification title="Success" type="success">
+                Default price applied to all entries
+            </Notification>
+        )
     }
 
     const onSubmit = async (data: BulkRefillFormData) => {
@@ -178,10 +187,18 @@ export default function BulkRefillPage() {
             setShowResults(true)
 
             if (successful > 0) {
-                toast.success(`Successfully processed ${successful} refill(s)`)
+                toast.push(
+                    <Notification title="Success" type="success">
+                        Successfully processed {successful} refill(s)
+                    </Notification>
+                )
             }
             if (failed.length > 0) {
-                toast.error(`Failed to process ${failed.length} refill(s)`)
+                toast.push(
+                    <Notification title="Error" type="danger">
+                        Failed to process {failed.length} refill(s)
+                    </Notification>
+                )
             }
 
             // If all successful, redirect after a delay
@@ -192,7 +209,11 @@ export default function BulkRefillPage() {
             }
         } catch (error) {
             console.error('Bulk refill error:', error)
-            toast.error('Failed to process bulk refills')
+            toast.push(
+                <Notification title="Error" type="danger">
+                    Failed to process bulk refills
+                </Notification>
+            )
         } finally {
             setIsSubmitting(false)
         }
@@ -200,10 +221,11 @@ export default function BulkRefillPage() {
 
     const handleImportCSV = () => {
         // TODO: Implement CSV import
-        toast('CSV import feature coming soon', {
-            icon: '📋',
-            duration: 3000,
-        })
+        toast.push(
+            <Notification title="Coming Soon" type="info" duration={3000}>
+                📋 CSV import feature coming soon
+            </Notification>
+        )
     }
 
     return (

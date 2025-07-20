@@ -26,14 +26,17 @@ export default function RoleBasedLayout({
     useEffect(() => {
         if (status === 'loading') return
 
-        if (!session) {
+        if (status === 'unauthenticated') {
+            console.log('[RoleBasedLayout] User is unauthenticated, redirecting to sign-in')
             router.push('/sign-in')
             return
         }
 
-        // Only set active role once when component mounts or role changes
-        console.log(`[RoleBasedLayout] Setting active role to: ${requiredRole}`)
-        setActiveRole(requiredRole)
+        if (session) {
+            // Only set active role once when component mounts or role changes
+            console.log(`[RoleBasedLayout] Setting active role to: ${requiredRole}`)
+            setActiveRole(requiredRole)
+        }
     }, [session, status, requiredRole, router, setActiveRole])
 
     // Loading state

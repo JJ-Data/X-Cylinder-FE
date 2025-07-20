@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1'
+const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1'
 
 export async function GET(
     request: NextRequest,
@@ -69,16 +69,16 @@ async function handleRequest(
             path.startsWith(publicPath)
         )
         
-        // Only check session for protected paths
-        if (!isPublicPath) {
-            const session = await auth()
-            
-            if (!session) {
-                return NextResponse.json(
-                    { error: 'Unauthorized', message: 'No valid session' },
-                    { status: 401 }
-                )
-            }
+        // Get session for both public and protected paths
+        // Public paths may have optional authentication
+        const session = await auth()
+        
+        // Only enforce authentication for protected paths
+        if (!isPublicPath && !session) {
+            return NextResponse.json(
+                { error: 'Unauthorized', message: 'No valid session' },
+                { status: 401 }
+            )
         }
 
         // Construct the backend URL
@@ -88,21 +88,25 @@ async function handleRequest(
         const searchParams = request.nextUrl.searchParams.toString()
         const fullUrl = searchParams ? `${backendUrl}?${searchParams}` : backendUrl
 
-        // Get cookies from the incoming request
-        const cookieHeader = request.headers.get('cookie') || ''
-
-        console.log('[API Proxy]', {
+        const timestamp = new Date().toISOString()
+        console.log(`[API Proxy ${timestamp}]`, {
             method,
             path,
             fullUrl,
             isPublicPath,
-            hasCookies: !!cookieHeader
+            hasSession: !!session,
+            hasAccessToken: !!(session as any)?.accessToken,
+            sessionUser: session?.user?.email,
+            userRole: session?.user?.role
         })
 
         // Prepare headers
-        const headers: HeadersInit = {
-            // Forward the cookies from the client request
-            'Cookie': cookieHeader,
+        const headers: HeadersInit = {}
+        
+        // Add Authorization header if we have an access token
+        if (session && (session as any).accessToken) {
+            headers['Authorization'] = `Bearer ${(session as any).accessToken}`
+            console.log('[API Proxy] Adding Authorization header')
         }
         
         // Only set Content-Type for requests with body
@@ -114,7 +118,7 @@ async function handleRequest(
         const options: RequestInit = {
             method,
             headers,
-            credentials: 'include', // Include cookies in the request
+            // Remove credentials since we're using Bearer tokens
         }
 
         // Add body for non-GET requests
@@ -128,7 +132,9 @@ async function handleRequest(
         }
 
         // Make the request to the backend
+        const startTime = Date.now()
         const response = await fetch(fullUrl, options)
+        const responseTime = Date.now() - startTime
 
         // Check content type to determine how to handle response
         const contentType = response.headers.get('content-type') || ''
@@ -136,11 +142,14 @@ async function handleRequest(
         const isPDF = contentType.includes('application/pdf')
         const isBinary = isImage || isPDF
 
-        console.log('[API Proxy Response]', {
+        console.log(`[API Proxy Response ${new Date().toISOString()}]`, {
+            path,
             status: response.status,
+            statusText: response.statusText,
             contentType,
             isBinary,
-            setCookieHeader: response.headers.get('set-cookie')?.substring(0, 100) + '...'
+            responseTime: `${responseTime}ms`,
+            hasAuthHeader: !!headers['Authorization']
         })
 
         let proxyResponse: NextResponse
@@ -168,59 +177,39 @@ async function handleRequest(
             )
         }
 
-        // Forward Set-Cookie headers from backend to client
-        // Note: fetch() in Node.js combines multiple Set-Cookie headers into one string
-        const setCookieHeader = response.headers.get('set-cookie')
-        if (setCookieHeader) {
-            // Split cookies properly - cookies can contain commas in expires= dates
-            // So we need to split by looking for cookie name patterns
-            const cookies: string[] = []
-            let currentCookie = ''
-            
-            setCookieHeader.split(',').forEach((part, _index) => {
-                // Check if this part starts with a cookie name (word characters followed by =)
-                // and we already have accumulated a cookie
-                if (currentCookie && /^\s*\w+\s*=/.test(part)) {
-                    cookies.push(currentCookie.trim())
-                    currentCookie = part
-                } else {
-                    currentCookie += (currentCookie ? ',' : '') + part
-                }
-            })
-            
-            // Don't forget the last cookie
-            if (currentCookie) {
-                cookies.push(currentCookie.trim())
-            }
-            
-            // Set each cookie separately
-            cookies.forEach(cookie => {
-                console.log('[API Proxy] Setting cookie:', cookie.split(';')[0]) // Log cookie name/value only
-                
-                // Parse the cookie to modify its attributes if needed
-                const cookieParts = cookie.split(';').map(part => part.trim())
-                const modifiedParts = cookieParts.map(part => {
-                    // Remove domain attribute to let browser use current domain
-                    if (part.toLowerCase().startsWith('domain=')) {
-                        return null
-                    }
-                    // Ensure SameSite=lax for cross-port compatibility
-                    if (part.toLowerCase().startsWith('samesite=')) {
-                        return 'SameSite=Lax'
-                    }
-                    return part
-                }).filter(Boolean)
-                
-                const modifiedCookie = modifiedParts.join('; ')
-                proxyResponse.headers.append('Set-Cookie', modifiedCookie)
-            })
-        }
+        // No longer forwarding cookies since we're using Bearer tokens
 
         return proxyResponse
     } catch (error) {
-        console.error('[API Proxy Error]', error)
+        const errorDetails = {
+            timestamp: new Date().toISOString(),
+            path: params.path.join('/'),
+            method,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            backendUrl: BACKEND_URL
+        }
+        
+        console.error('[API Proxy Error]', errorDetails)
+        
+        // Provide more helpful error messages
+        let errorMessage = 'Internal Server Error'
+        if (error instanceof Error) {
+            if (error.message.includes('fetch failed')) {
+                errorMessage = 'Failed to connect to backend API. Please check if the API server is running.'
+            } else if (error.message.includes('ECONNREFUSED')) {
+                errorMessage = 'Backend API connection refused. The API server may be down.'
+            } else {
+                errorMessage = error.message
+            }
+        }
+        
         return NextResponse.json(
-            { error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error' },
+            { 
+                error: 'API Proxy Error', 
+                message: errorMessage,
+                details: process.env.NODE_ENV === 'development' ? errorDetails : undefined
+            },
             { status: 500 }
         )
     }

@@ -13,10 +13,10 @@ export interface RadioProps
     disabled?: boolean
     labelRef?: Ref<HTMLLabelElement>
     name?: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     onChange?: (value: any, e: MouseEvent) => void
     ref?: Ref<HTMLInputElement>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     value?: any
     vertical?: boolean
     readOnly?: boolean
@@ -65,7 +65,7 @@ const Radio = (props: RadioProps) => {
     }, [radioChecked, checkedProp, defaultChecked, groupValue])
 
     const onRadioChange = useCallback(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         (e: any) => {
             if (disabled || readOnly) {
                 return

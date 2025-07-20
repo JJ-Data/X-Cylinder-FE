@@ -20,6 +20,7 @@ import {
     PiUploadDuotone,
     PiWarningCircleDuotone,
     PiArrowsLeftRightDuotone,
+    PiArrowsCounterClockwiseDuotone,
 } from 'react-icons/pi'
 import type { JSX } from 'react'
 
@@ -40,6 +41,7 @@ const navigationIcon: NavigationIcons = {
     outlets: <PiStorefrontDuotone />,
     users: <PiUsersThreeDuotone />,
     cylinders: <PiCylinderDuotone />,
+    swaps: <PiArrowsCounterClockwiseDuotone />,
     transfers: <PiArrowsLeftRightDuotone />,
     settings: <PiGearSixDuotone />,
     reports: <PiFileTextDuotone />,

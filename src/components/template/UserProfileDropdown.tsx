@@ -19,17 +19,26 @@ type DropdownList = {
 const dropdownItemList: DropdownList[] = []
 
 const _UserDropdown = () => {
-    const { session } = useCurrentSession()
+    const { session, isLoading, isAuthenticated } = useCurrentSession()
 
     const handleSignOut = async () => {
         await signOut()
     }
 
-    const user = session?.user && 'email' in session.user ? session.user : null
+    const user = session?.user
     const avatarProps = {
         ...(user?.image
             ? { src: user.image }
             : { icon: <PiUserDuotone /> }),
+    }
+    
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="cursor-pointer flex items-center">
+                <Avatar size={32} icon={<PiUserDuotone />} />
+            </div>
+        )
     }
 
     return (

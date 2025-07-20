@@ -9,7 +9,7 @@ const Side = ({ children, ...rest }: SideProps) => {
             <div className=" flex flex-col justify-center items-center flex-1">
                 <div className="w-full xl:max-w-[450px] px-8 max-w-[380px]">
                     {children
-                        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        ?  
                           cloneElement(children as React.ReactElement<any>, {
                               ...rest,
                           })

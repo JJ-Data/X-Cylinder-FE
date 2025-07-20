@@ -1,28 +1,22 @@
 'use client'
 
 import { SessionProvider as NextAuthSessionProvider } from 'next-auth/react'
-import SessionContext from './SessionContext'
 import AuthSyncProvider from '../AuthSyncProvider'
-import type { Session as NextAuthSession } from 'next-auth'
-
-type Session = NextAuthSession | null
 
 type AuthProviderProps = {
-    session: Session | null
     children: React.ReactNode
 }
 
-const AuthProvider = (props: AuthProviderProps) => {
-    const { session, children } = props
-
+const AuthProvider = ({ children }: AuthProviderProps) => {
     return (
-        /** since the next auth useSession hook was triggering mutliple re-renders, hence we are using the our custom session provider and we still included the next auth session provider, incase we need to use any client hooks from next auth */
-        <NextAuthSessionProvider session={session} refetchOnWindowFocus={false}>
-            <SessionContext.Provider value={session}>
-                <AuthSyncProvider>
-                    {children}
-                </AuthSyncProvider>
-            </SessionContext.Provider>
+        // Let NextAuth handle session fetching on the client
+        <NextAuthSessionProvider 
+            refetchOnWindowFocus={false}
+            basePath="/api/auth"
+        >
+            <AuthSyncProvider>
+                {children}
+            </AuthSyncProvider>
         </NextAuthSessionProvider>
     )
 }

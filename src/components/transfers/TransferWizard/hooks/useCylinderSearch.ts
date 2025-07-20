@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react'
-import { toast } from 'react-hot-toast'
+import React, { useState, useCallback } from 'react'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 import type { Cylinder } from '@/types/cylinder'
 
 export const useCylinderSearch = () => {
@@ -19,23 +20,43 @@ export const useCylinderSearch = () => {
                 const cylinder = data.data
 
                 if (cylinder.status === 'leased') {
-                    toast.error('Cannot transfer a leased cylinder')
+                    toast.push(
+                        React.createElement(Notification, {
+                            title: 'Error',
+                            type: 'danger'
+                        }, 'Cannot transfer a leased cylinder')
+                    )
                     return null
                 }
 
                 if (cylinder.status === 'damaged') {
-                    toast.error('Cannot transfer a damaged cylinder')
+                    toast.push(
+                        React.createElement(Notification, {
+                            title: 'Error',
+                            type: 'danger'
+                        }, 'Cannot transfer a damaged cylinder')
+                    )
                     return null
                 }
 
                 setSelectedCylinder(cylinder)
                 return cylinder
             } else {
-                toast.error('Cylinder not found')
+                toast.push(
+                    React.createElement(Notification, {
+                        title: 'Error',
+                        type: 'danger'
+                    }, 'Cylinder not found')
+                )
                 return null
             }
         } catch {
-            toast.error('Error searching for cylinder')
+            toast.push(
+                React.createElement(Notification, {
+                    title: 'Error',
+                    type: 'danger'
+                }, 'Error searching for cylinder')
+            )
             return null
         } finally {
             setIsSearching(false)
@@ -44,7 +65,12 @@ export const useCylinderSearch = () => {
 
     const handleSearch = useCallback(async () => {
         if (!cylinderSearch.trim()) {
-            toast.error('Please enter a cylinder code')
+            toast.push(
+                React.createElement(Notification, {
+                    title: 'Error',
+                    type: 'danger'
+                }, 'Please enter a cylinder code')
+            )
             return
         }
         await fetchCylinder(cylinderSearch)

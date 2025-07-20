@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 const hasOwnProperty = Object.prototype.hasOwnProperty
 
 function is(x: any, y: any) {
