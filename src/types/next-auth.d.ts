@@ -4,7 +4,8 @@ declare module 'next-auth' {
     interface Session {
         user: {
             id: string
-            role: 'CUSTOMER' | 'STAFF' | 'OPERATOR' | 'ADMIN'
+            role: 'CUSTOMER' | 'STAFF' | 'OPERATOR' | 'ADMIN' // Frontend role format for UI
+            backendRole: string // Backend role format for API calls
             outletId?: string
             status: 'PENDING' | 'ACTIVE' | 'INACTIVE'
             authority: string[]
@@ -15,7 +16,7 @@ declare module 'next-auth' {
     interface User {
         id: string
         userName?: string
-        role?: 'CUSTOMER' | 'STAFF' | 'OPERATOR' | 'ADMIN'
+        role?: string // Backend role format during auth
         outletId?: string
         status?: 'PENDING' | 'ACTIVE' | 'INACTIVE'
         accessToken?: string

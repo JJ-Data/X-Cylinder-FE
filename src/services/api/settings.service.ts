@@ -360,6 +360,44 @@ class SettingsService {
     })
     return response.data
   }
+
+  // Simplified settings methods
+  async getAllSettings(): Promise<ApiResponse<{ settings: any[] }>> {
+    const response = await apiClient.get('/settings')
+    return {
+      success: true,
+      data: {
+        settings: response.data.data || []
+      }
+    }
+  }
+
+  async batchUpdateSettings(
+    updates: Array<{
+      key: string
+      value: any
+      dataType: string
+    }>
+  ): Promise<ApiResponse<void>> {
+    // Create or update each setting individually
+    // Since we don't have IDs, we'll use the create/update endpoint
+    try {
+      for (const update of updates) {
+        await apiClient.post('/settings', {
+          categoryId: 1, // Default category for pricing settings
+          settingKey: update.key,
+          settingValue: update.value,
+          dataType: update.dataType || 'STRING'
+        })
+      }
+      return {
+        success: true,
+        message: 'Settings updated successfully'
+      }
+    } catch (error) {
+      throw error
+    }
+  }
 }
 
 export const settingsService = new SettingsService()

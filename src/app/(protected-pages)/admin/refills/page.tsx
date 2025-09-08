@@ -688,7 +688,7 @@ export default function RefillsPage() {
                         onPaginationChange={(page) => handlePageChange(page)}
                         pagingData={{
                             total: totalItems,
-                            pageIndex: currentPage,
+                            pageIndex: currentPage,  // Pass 1-based directly - DataTable uses 1-based
                             pageSize: pageSize,
                         }}
                     />

@@ -1,12 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import Avatar from '@/components/ui/Avatar'
 import Dropdown from '@/components/ui/Dropdown'
 import withHeaderItem from '@/utils/hoc/withHeaderItem'
 import Link from 'next/link'
 import signOut from '@/server/actions/auth/handleSignOut'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
-import { PiUserDuotone, PiSignOutDuotone } from 'react-icons/pi'
+import ChangePasswordDialog from '@/components/auth/ChangePasswordDialog'
+import { PiUserDuotone, PiSignOutDuotone, PiLockDuotone } from 'react-icons/pi'
 
 import type { JSX } from 'react'
 
@@ -20,6 +22,7 @@ const dropdownItemList: DropdownList[] = []
 
 const _UserDropdown = () => {
     const { session, isLoading, isAuthenticated } = useCurrentSession()
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false)
 
     const handleSignOut = async () => {
         await signOut()
@@ -42,16 +45,17 @@ const _UserDropdown = () => {
     }
 
     return (
-        <Dropdown
-            className="flex"
-            toggleClassName="flex items-center"
-            renderTitle={
-                <div className="cursor-pointer flex items-center">
-                    <Avatar size={32} {...avatarProps} />
-                </div>
-            }
-            placement="bottom-end"
-        >
+        <>
+            <Dropdown
+                className="flex"
+                toggleClassName="flex items-center"
+                renderTitle={
+                    <div className="cursor-pointer flex items-center">
+                        <Avatar size={32} {...avatarProps} />
+                    </div>
+                }
+                placement="bottom-end"
+            >
             <Dropdown.Item variant="header">
                 <div className="py-2 px-3 flex items-center gap-3">
                     <Avatar {...avatarProps} />
@@ -81,6 +85,17 @@ const _UserDropdown = () => {
                 </Dropdown.Item>
             ))}
             <Dropdown.Item
+                eventKey="Change Password"
+                className="gap-2"
+                onClick={() => setShowPasswordDialog(true)}
+            >
+                <span className="text-xl">
+                    <PiLockDuotone />
+                </span>
+                <span>Change Password</span>
+            </Dropdown.Item>
+            <Dropdown.Item variant="divider" />
+            <Dropdown.Item
                 eventKey="Sign Out"
                 className="gap-2"
                 onClick={handleSignOut}
@@ -90,7 +105,13 @@ const _UserDropdown = () => {
                 </span>
                 <span>Sign Out</span>
             </Dropdown.Item>
-        </Dropdown>
+            </Dropdown>
+            
+            <ChangePasswordDialog 
+                isOpen={showPasswordDialog}
+                onClose={() => setShowPasswordDialog(false)}
+            />
+        </>
     )
 }
 

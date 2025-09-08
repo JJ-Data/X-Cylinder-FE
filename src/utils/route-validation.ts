@@ -84,6 +84,11 @@ export function validateCallbackUrl(
     // If no callback URL provided, use role-based dashboard
     if (!callbackUrl) {
         const roleBasedPath = userRole ? getRoleBasedPath(userRole) : '/admin/dashboard'
+        console.log('[validateCallbackUrl] No callback URL, using role-based path:', {
+            userRole,
+            roleBasedPath,
+            timestamp: new Date().toISOString()
+        })
         return {
             isValid: false,
             redirectUrl: roleBasedPath,
@@ -103,6 +108,12 @@ export function validateCallbackUrl(
         const url = new URL(callbackUrl, baseOrigin)
         if (url.origin !== baseOrigin && callbackUrl.startsWith('http')) {
             const roleBasedPath = userRole ? getRoleBasedPath(userRole) : '/admin/dashboard'
+            console.log('[validateCallbackUrl] External URL blocked, using role-based path:', {
+                userRole,
+                roleBasedPath,
+                blockedUrl: callbackUrl,
+                timestamp: new Date().toISOString()
+            })
             return {
                 isValid: false,
                 redirectUrl: roleBasedPath,
@@ -116,6 +127,12 @@ export function validateCallbackUrl(
     // Check if it's a route that should redirect to dashboard
     if (REDIRECT_TO_DASHBOARD_ROUTES.includes(cleanUrl)) {
         const roleBasedPath = userRole ? getRoleBasedPath(userRole) : '/admin/dashboard'
+        console.log('[validateCallbackUrl] Legacy route redirected to role-based path:', {
+            userRole,
+            roleBasedPath,
+            legacyRoute: cleanUrl,
+            timestamp: new Date().toISOString()
+        })
         return {
             isValid: false,
             redirectUrl: roleBasedPath,
@@ -144,6 +161,12 @@ export function validateCallbackUrl(
     
     // Invalid route - redirect to role-based dashboard
     const roleBasedPath = userRole ? getRoleBasedPath(userRole) : '/admin/dashboard'
+    console.log('[validateCallbackUrl] Invalid route, using role-based path:', {
+        userRole,
+        roleBasedPath,
+        invalidRoute: cleanUrl,
+        timestamp: new Date().toISOString()
+    })
     return {
         isValid: false,
         redirectUrl: roleBasedPath,
@@ -161,7 +184,33 @@ export function sanitizeCallbackUrl(
     callbackUrl: string | null | undefined,
     userRole?: UserRole | string
 ): string {
+    console.log('[sanitizeCallbackUrl] ===== URL SANITIZATION START =====')
+    console.log('[sanitizeCallbackUrl] Input data:', {
+        callbackUrl,
+        userRole,
+        userRoleType: typeof userRole,
+        timestamp: new Date().toISOString()
+    })
+    
     const validation = validateCallbackUrl(callbackUrl, userRole)
+    
+    console.log('[sanitizeCallbackUrl] Validation result:', {
+        originalUrl: callbackUrl,
+        sanitizedUrl: validation.redirectUrl,
+        isValid: validation.isValid,
+        reason: validation.reason,
+        userRole,
+        timestamp: new Date().toISOString()
+    })
+    
+    if (validation.redirectUrl === '/admin/dashboard' && userRole !== 'admin') {
+        console.error('[sanitizeCallbackUrl] ❌ POTENTIAL ISSUE: Non-admin user redirected to admin dashboard!')
+        console.log('[sanitizeCallbackUrl] This may indicate role routing failure')
+    }
+    
+    console.log('[sanitizeCallbackUrl] ===== URL SANITIZATION END =====')
+    console.log('[sanitizeCallbackUrl] Final redirect URL:', validation.redirectUrl)
+    
     return validation.redirectUrl
 }
 

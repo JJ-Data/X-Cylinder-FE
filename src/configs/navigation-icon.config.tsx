@@ -21,6 +21,7 @@ import {
     PiWarningCircleDuotone,
     PiArrowsLeftRightDuotone,
     PiArrowsCounterClockwiseDuotone,
+    PiUserPlusDuotone,
 } from 'react-icons/pi'
 import type { JSX } from 'react'
 
@@ -54,6 +55,7 @@ const navigationIcon: NavigationIcons = {
     
     // Staff specific
     customers: <PiUsersThreeDuotone />,
+    customerAdd: <PiUserPlusDuotone />,
     leasing: <PiFileTextDuotone />,
     inventory: <PiClipboardTextDuotone />,
     

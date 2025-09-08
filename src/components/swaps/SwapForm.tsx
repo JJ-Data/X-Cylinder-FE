@@ -15,6 +15,7 @@ import { FormItem } from '@/components/ui/Form'
 import CylinderQRScanner from '@/components/cylinders/CylinderQRScanner'
 import { useSwapManagement, useFindCylinder, useAvailableCylinders } from '@/hooks/useSwap'
 import { useSession } from 'next-auth/react'
+import { useAuthStore } from '@/stores'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import type { CreateSwapDto } from '@/types/swap'
@@ -42,6 +43,7 @@ interface SwapFormProps {
 export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFormProps) {
   const router = useRouter()
   const { data: session } = useSession()
+  const { activeRole } = useAuthStore()
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [foundLease, setFoundLease] = useState<any>(null)
   const [searchInput, setSearchInput] = useState('')
@@ -180,7 +182,12 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
       
       await createSwap(swapData)
       toast.success('Cylinder swap completed successfully')
-      router.push('/admin/swaps')
+      
+      // Navigate based on user role
+      const basePath = activeRole === 'ADMIN' ? '/admin' 
+                     : activeRole === 'STAFF' ? '/staff'
+                     : '/operator'
+      router.push(`${basePath}/swaps`)
     } catch (error: any) {
       toast.error(error.message || 'Failed to process cylinder swap')
     }
@@ -475,7 +482,12 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
           <Button
             type="button"
             variant="plain"
-            onClick={() => router.push('/admin/swaps')}
+            onClick={() => {
+              const basePath = activeRole === 'ADMIN' ? '/admin' 
+                             : activeRole === 'STAFF' ? '/staff'
+                             : '/operator'
+              router.push(`${basePath}/swaps`)
+            }}
           >
             Cancel
           </Button>

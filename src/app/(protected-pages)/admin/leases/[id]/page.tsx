@@ -1,7 +1,21 @@
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'
-import { HiArrowLeft, HiPrinter, HiCalendar, HiCash } from 'react-icons/hi'
+import {
+    PiArrowLeftDuotone,
+    PiPrinterDuotone,
+    PiCalendarDuotone,
+    PiCurrencyCircleDollarDuotone,
+    PiCheckCircleDuotone,
+    PiClockDuotone,
+    PiWarningDuotone,
+    PiUserDuotone,
+    PiPackageDuotone,
+    PiMapPinDuotone,
+    PiDotsThreeVerticalDuotone,
+    PiReceiptDuotone,
+    PiArrowsCounterClockwiseDuotone,
+} from 'react-icons/pi'
 import Container from '@/components/shared/Container'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -12,18 +26,37 @@ import Alert from '@/components/ui/Alert'
 import { useLease, useCylinderLeaseHistory } from '@/hooks/useLeases'
 import { format, isAfter, parseISO } from 'date-fns'
 import { useState } from 'react'
-import { HiCheckCircle, HiClock } from 'react-icons/hi'
 
-const getStatusColor = (status: string) => {
+const getStatusConfig = (status: string) => {
     switch (status) {
         case 'active':
-            return { color: 'text-blue-700', bgColor: 'bg-blue-100' }
+            return {
+                icon: <PiClockDuotone className="text-blue-600 text-lg" />,
+                color: 'text-blue-700',
+                bgColor: 'bg-blue-100',
+                borderColor: 'border-blue-200',
+            }
         case 'returned':
-            return { color: 'text-green-700', bgColor: 'bg-green-100' }
+            return {
+                icon: <PiCheckCircleDuotone className="text-green-600 text-lg" />,
+                color: 'text-green-700',
+                bgColor: 'bg-green-100',
+                borderColor: 'border-green-200',
+            }
         case 'overdue':
-            return { color: 'text-red-700', bgColor: 'bg-red-100' }
+            return {
+                icon: <PiWarningDuotone className="text-red-600 text-lg" />,
+                color: 'text-red-700',
+                bgColor: 'bg-red-100',
+                borderColor: 'border-red-200',
+            }
         default:
-            return { color: 'text-gray-700', bgColor: 'bg-gray-100' }
+            return {
+                icon: <PiClockDuotone className="text-gray-600 text-lg" />,
+                color: 'text-gray-700',
+                bgColor: 'bg-gray-100',
+                borderColor: 'border-gray-200',
+            }
     }
 }
 
@@ -93,7 +126,7 @@ export default function LeaseDetailPage() {
     const staff = lease.staff
     const returnStaff = lease.returnStaffId
     const status = getLeaseStatus(lease)
-    const statusConfig = getStatusColor(status)
+    const statusConfig = getStatusConfig(status)
 
     // Calculate days leased
     const leaseDate = new Date(lease.leaseDate)
@@ -127,44 +160,89 @@ export default function LeaseDetailPage() {
                 <Button
                     size="sm"
                     variant="plain"
-                    icon={<HiArrowLeft />}
+                    icon={<PiArrowLeftDuotone />}
                     onClick={() => router.push('/admin/leases')}
+                    className="mb-4"
                 >
-                    Back to Leases
+                    <span className="hidden sm:inline">Back to Leases</span>
+                    <span className="sm:hidden">Back</span>
                 </Button>
 
-                <div className="flex items-center justify-between mt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h3 className="mb-1">Lease #{lease.id}</h3>
-                        <div className="flex items-center gap-3">
-                            <Tag
-                                className={`${statusConfig.color} ${statusConfig.bgColor} capitalize`}
-                            >
-                                {status}
-                            </Tag>
-                            <span className="text-sm text-gray-500">
-                                Created on{' '}
-                                {format(new Date(lease.createdAt), 'PPP')}
+                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">Lease #{lease.id}</h3>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${statusConfig.bgColor} ${statusConfig.borderColor} border`}>
+                                {statusConfig.icon}
+                                <span className={`text-sm font-medium ${statusConfig.color} capitalize`}>
+                                    {status}
+                                </span>
+                            </div>
+                            <span className="text-xs sm:text-sm text-gray-500">
+                                Created {format(new Date(lease.createdAt), 'PPP')}
                             </span>
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    {/* Desktop Actions */}
+                    <div className="hidden sm:flex gap-2">
                         <Button
                             variant="plain"
                             size="sm"
-                            icon={<HiPrinter />}
+                            icon={<PiPrinterDuotone />}
                             onClick={handlePrint}
                         >
-                            Print
+                            Print Details
+                        </Button>
+                        <Button
+                            variant="solid"
+                            size="sm"
+                            icon={<PiReceiptDuotone />}
+                            onClick={() => window.open(`/admin/leases/${leaseId}/receipt`, '_blank')}
+                        >
+                            Print Receipt
                         </Button>
                         {lease.leaseStatus === 'active' && (
                             <Button
                                 variant="solid"
                                 size="sm"
+                                icon={<PiArrowsCounterClockwiseDuotone />}
                                 onClick={handleProcessReturn}
                             >
                                 Process Return
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* Mobile Actions */}
+                    <div className="flex sm:hidden gap-2">
+                        <Button
+                            variant="plain"
+                            size="sm"
+                            icon={<PiPrinterDuotone />}
+                            onClick={handlePrint}
+                            className="flex-1"
+                        >
+                            Details
+                        </Button>
+                        <Button
+                            variant="solid"
+                            size="sm"
+                            icon={<PiReceiptDuotone />}
+                            onClick={() => window.open(`/admin/leases/${leaseId}/receipt`, '_blank')}
+                            className="flex-1"
+                        >
+                            Receipt
+                        </Button>
+                        {lease.leaseStatus === 'active' && (
+                            <Button
+                                variant="solid"
+                                size="sm"
+                                icon={<PiArrowsCounterClockwiseDuotone />}
+                                onClick={handleProcessReturn}
+                                className="flex-1"
+                            >
+                                Return
                             </Button>
                         )}
                     </div>
@@ -173,19 +251,42 @@ export default function LeaseDetailPage() {
 
             {/* Status Alert */}
             {status === 'overdue' && (
-                <Alert type="warning" showIcon className="mb-6">
-                    This lease is {daysOverdue} days overdue. Expected return
-                    was on {format(expectedReturn, 'PPP')}. Please contact the
-                    customer to arrange for cylinder return.
+                <Alert type="warning" showIcon className="mb-6 animate-pulse">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <p className="font-medium">This lease is {daysOverdue} days overdue</p>
+                            <p className="text-sm mt-1">
+                                Expected return was on {format(expectedReturn, 'PPP')}. 
+                                Please contact the customer to arrange for cylinder return.
+                            </p>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="solid"
+                            className="shrink-0"
+                            onClick={() => router.push(`/admin/customers/${customer?.id}`)}
+                        >
+                            Contact Customer
+                        </Button>
+                    </div>
                 </Alert>
             )}
 
             {lease.leaseStatus === 'returned' && (
                 <Alert type="success" showIcon className="mb-6">
-                    This lease was successfully returned on{' '}
-                    {format(new Date(lease.actualReturnDate || ''), 'PPP')}.
-                    {lease.refundAmount &&
-                        `Refund of ₦${parseFloat(lease.refundAmount).toLocaleString()} was processed.`}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <PiCheckCircleDuotone className="text-green-600 text-xl shrink-0" />
+                        <div>
+                            <p className="font-medium">
+                                Lease successfully returned on {format(new Date(lease.actualReturnDate || ''), 'PPP')}
+                            </p>
+                            {lease.refundAmount && (
+                                <p className="text-sm mt-1">
+                                    Refund of ₦{parseFloat(lease.refundAmount).toLocaleString()} was processed
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </Alert>
             )}
 
@@ -198,10 +299,13 @@ export default function LeaseDetailPage() {
                 </Tabs.TabList>
 
                 <Tabs.TabContent value="details">
-                    <div className="grid md:grid-cols-2 gap-6 mt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
                         {/* Customer Information */}
-                        <Card>
-                            <h5 className="mb-4">Customer Information</h5>
+                        <Card className="hover:shadow-lg transition-shadow duration-200">
+                            <div className="flex items-center gap-2 mb-4">
+                                <PiUserDuotone className="text-xl text-gray-600" />
+                                <h5 className="font-semibold">Customer Information</h5>
+                            </div>
                             {customer ? (
                                 <div className="space-y-3">
                                     <div>
@@ -240,8 +344,11 @@ export default function LeaseDetailPage() {
                         </Card>
 
                         {/* Cylinder Information */}
-                        <Card>
-                            <h5 className="mb-4">Cylinder Information</h5>
+                        <Card className="hover:shadow-lg transition-shadow duration-200">
+                            <div className="flex items-center gap-2 mb-4">
+                                <PiPackageDuotone className="text-xl text-gray-600" />
+                                <h5 className="font-semibold">Cylinder Information</h5>
+                            </div>
                             {cylinder ? (
                                 <div className="space-y-3">
                                     <div>
@@ -279,12 +386,15 @@ export default function LeaseDetailPage() {
                         </Card>
 
                         {/* Lease Information */}
-                        <Card>
-                            <h5 className="mb-4">Lease Information</h5>
+                        <Card className="hover:shadow-lg transition-shadow duration-200">
+                            <div className="flex items-center gap-2 mb-4">
+                                <PiCalendarDuotone className="text-xl text-gray-600" />
+                                <h5 className="font-semibold">Lease Information</h5>
+                            </div>
                             <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <HiCalendar className="text-gray-400" />
-                                    <div>
+                                <div className="flex items-start gap-3">
+                                    <PiCalendarDuotone className="text-gray-400 mt-0.5" />
+                                    <div className="flex-1">
                                         <p className="text-sm text-gray-500">
                                             Lease Date
                                         </p>
@@ -297,9 +407,9 @@ export default function LeaseDetailPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <HiCalendar className="text-gray-400" />
-                                    <div>
+                                <div className="flex items-start gap-3">
+                                    <PiCalendarDuotone className="text-gray-400 mt-0.5" />
+                                    <div className="flex-1">
                                         <p className="text-sm text-gray-500">
                                             Expected Return Date
                                         </p>
@@ -310,9 +420,9 @@ export default function LeaseDetailPage() {
                                 </div>
 
                                 {actualReturn && (
-                                    <div className="flex items-center gap-3">
-                                        <HiCheckCircle className="text-green-500" />
-                                        <div>
+                                    <div className="flex items-start gap-3">
+                                        <PiCheckCircleDuotone className="text-green-500 text-lg mt-0.5" />
+                                        <div className="flex-1">
                                             <p className="text-sm text-gray-500">
                                                 Actual Return Date
                                             </p>
@@ -332,13 +442,16 @@ export default function LeaseDetailPage() {
                                     </p>
                                 </div>
 
-                                <div>
-                                    <p className="text-sm text-gray-500">
-                                        Outlet
-                                    </p>
-                                    <p className="font-medium">
-                                        {outlet?.name || 'N/A'}
-                                    </p>
+                                <div className="flex items-start gap-3">
+                                    <PiMapPinDuotone className="text-gray-400 mt-0.5" />
+                                    <div className="flex-1">
+                                        <p className="text-sm text-gray-500">
+                                            Outlet
+                                        </p>
+                                        <p className="font-medium">
+                                            {outlet?.name || 'N/A'}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div>
@@ -366,11 +479,14 @@ export default function LeaseDetailPage() {
                         </Card>
 
                         {/* Financial Information */}
-                        <Card>
-                            <h5 className="mb-4">Financial Information</h5>
+                        <Card className="hover:shadow-lg transition-shadow duration-200">
+                            <div className="flex items-center gap-2 mb-4">
+                                <PiCurrencyCircleDollarDuotone className="text-xl text-gray-600" />
+                                <h5 className="font-semibold">Financial Information</h5>
+                            </div>
                             <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <HiCash className="text-gray-400" />
+                                <div className="flex items-start gap-3">
+                                    <PiCurrencyCircleDollarDuotone className="text-gray-400 text-lg mt-0.5" />
                                     <div className="flex-1">
                                         <div className="flex justify-between">
                                             <p className="text-sm text-gray-500">
@@ -453,7 +569,7 @@ export default function LeaseDetailPage() {
                                     {/* Lease Created */}
                                     <div className="flex gap-4">
                                         <div className="relative z-10 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                            <HiClock className="text-white text-sm" />
+                                            <PiClockDuotone className="text-white text-sm" />
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium">
@@ -477,7 +593,7 @@ export default function LeaseDetailPage() {
                                         <div
                                             className={`relative z-10 w-8 h-8 ${status === 'overdue' ? 'bg-red-500' : 'bg-gray-400'} rounded-full flex items-center justify-center`}
                                         >
-                                            <HiCalendar className="text-white text-sm" />
+                                            <PiCalendarDuotone className="text-white text-sm" />
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-medium">
@@ -503,7 +619,7 @@ export default function LeaseDetailPage() {
                                     {actualReturn && (
                                         <div className="flex gap-4">
                                             <div className="relative z-10 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                                <HiCheckCircle className="text-white text-sm" />
+                                                <PiCheckCircleDuotone className="text-white text-sm" />
                                             </div>
                                             <div className="flex-1">
                                                 <p className="font-medium">

@@ -53,6 +53,22 @@ export default function RoleBasedLayout({
         return null
     }
 
+    // For staff and operators, check outlet assignment
+    if ((requiredRole === 'STAFF' || requiredRole === 'REFILL_OP') && !session.user?.outletId) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                        No Outlet Assigned
+                    </h2>
+                    <p className="text-gray-600">
+                        Your account has not been assigned to an outlet. Please contact your administrator.
+                    </p>
+                </div>
+            </div>
+        )
+    }
+
     // Render children - role checking is done by middleware
     return <>{children}</>
 }

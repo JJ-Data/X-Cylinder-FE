@@ -23,6 +23,7 @@ export interface CreateLeaseDto {
   cylinderId: number
   depositAmount: number
   leaseAmount: number
+  paymentMethod?: 'cash' | 'pos' | 'bank_transfer'
   notes?: string
 }
 

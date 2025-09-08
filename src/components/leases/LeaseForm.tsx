@@ -19,6 +19,8 @@ import { useCustomers } from '@/hooks/useCustomers'
 import { useCylinders } from '@/hooks/useCylinders'
 import { useLeaseMutations } from '@/hooks/useLeases'
 import { formatCurrency } from '@/utils/formatCurrency'
+import { handleBackendValidationErrors } from '@/utils/errorHandler'
+import { toast } from 'sonner'
 import type { ZodType } from 'zod'
 import type { Customer } from '@/types/customer'
 
@@ -26,8 +28,10 @@ const leaseSchema: ZodType<LeaseFormData> = z.object({
     customerId: z.number().min(1, 'Customer is required'),
     cylinderId: z.number().min(1, 'Cylinder is required'),
     deposit: z.number().min(0, 'Deposit must be a positive number'),
-    leaseDuration: z.number().min(1, 'Lease duration must be at least 1 month'),
-    monthlyRate: z.number().min(0, 'Monthly rate must be a positive number'),
+    leaseDuration: z.number().min(1, 'Lease duration must be at least 1 month').optional(),
+    paymentMethod: z.enum(['cash', 'pos', 'bank_transfer'], {
+        required_error: 'Payment method is required',
+    }),
     notes: z.string().optional(),
 })
 
@@ -35,8 +39,8 @@ type LeaseFormData = {
     customerId: number
     cylinderId: number
     deposit: number
-    leaseDuration: number
-    monthlyRate: number
+    leaseDuration?: number
+    paymentMethod: 'cash' | 'pos' | 'bank_transfer'
     notes?: string
 }
 
@@ -54,6 +58,7 @@ const steps = [
 export function LeaseForm({ }: LeaseFormProps) {
     const router = useRouter()
     const [currentStep, setCurrentStep] = useState(0)
+    const [formError, setFormError] = useState<string | null>(null)
 
     const { data: customers } = useCustomers()
     const { data: cylinders } = useCylinders({ status: 'available' })
@@ -66,13 +71,14 @@ export function LeaseForm({ }: LeaseFormProps) {
         control,
         watch,
         trigger,
+        setError,
     } = useForm<LeaseFormData>({
         defaultValues: {
             customerId: 0,
             cylinderId: 0,
             deposit: 0,
             leaseDuration: 1,
-            monthlyRate: 0,
+            paymentMethod: 'cash',
             notes: '',
         },
         resolver: zodResolver(leaseSchema),
@@ -88,10 +94,25 @@ export function LeaseForm({ }: LeaseFormProps) {
 
     const onSubmit = async (data: LeaseFormData) => {
         try {
-            await createLease.trigger(data)
-            router.push('/admin/leases')
-        } catch (error) {
-            console.error('Failed to create lease:', error)
+            setFormError(null) // Clear any previous errors
+            const result = await createLease.trigger({
+                customerId: data.customerId,
+                cylinderId: data.cylinderId,
+                depositAmount: data.deposit,
+                duration: data.leaseDuration,
+                paymentMethod: data.paymentMethod,
+                notes: data.notes || undefined, // Convert empty string to undefined
+                expectedReturnDate: data.leaseDuration 
+                    ? new Date(Date.now() + data.leaseDuration * 30 * 24 * 60 * 60 * 1000)
+                    : undefined,
+            })
+            if (result?.id) {
+                router.push(`/admin/leases/${result.id}`)
+            }
+        } catch (error: any) {
+            const errorMessage = handleBackendValidationErrors(error, setError)
+            setFormError(errorMessage)
+            toast.error(errorMessage)
         }
     }
 
@@ -106,7 +127,7 @@ export function LeaseForm({ }: LeaseFormProps) {
                 fieldsToValidate = ['cylinderId']
                 break
             case 2:
-                fieldsToValidate = ['deposit', 'leaseDuration', 'monthlyRate']
+                fieldsToValidate = ['deposit', 'paymentMethod']
                 break
         }
 
@@ -299,10 +320,9 @@ export function LeaseForm({ }: LeaseFormProps) {
                             </FormItem>
 
                             <FormItem
-                                label="Lease Duration (months)"
+                                label="Lease Duration (months) - Optional"
                                 invalid={Boolean(errors.leaseDuration)}
                                 errorMessage={errors.leaseDuration?.message}
-                                asterisk
                             >
                                 <Controller
                                     name="leaseDuration"
@@ -325,25 +345,35 @@ export function LeaseForm({ }: LeaseFormProps) {
                             </FormItem>
 
                             <FormItem
-                                label="Monthly Rate"
-                                invalid={Boolean(errors.monthlyRate)}
-                                errorMessage={errors.monthlyRate?.message}
+                                label="Payment Method"
+                                invalid={Boolean(errors.paymentMethod)}
+                                errorMessage={errors.paymentMethod?.message}
                                 asterisk
                             >
                                 <Controller
-                                    name="monthlyRate"
+                                    name="paymentMethod"
                                     control={control}
                                     render={({ field }) => (
-                                        <Input
+                                        <Select
                                             {...field}
-                                            type="number"
-                                            placeholder="Enter monthly rate"
-                                            autoComplete="off"
-                                            onChange={(e) =>
-                                                field.onChange(
-                                                    Number(e.target.value),
-                                                )
+                                            options={[
+                                                { value: 'cash', label: 'Cash' },
+                                                { value: 'pos', label: 'POS (Card Payment)' },
+                                                { value: 'bank_transfer', label: 'Bank Transfer' },
+                                            ]}
+                                            placeholder="Select payment method"
+                                            value={
+                                                field.value
+                                                    ? { value: field.value, label: 
+                                                        field.value === 'cash' ? 'Cash' :
+                                                        field.value === 'pos' ? 'POS (Card Payment)' :
+                                                        'Bank Transfer'
+                                                      }
+                                                    : null
                                             }
+                                            onChange={(option: any) => {
+                                                field.onChange(option?.value || 'cash')
+                                            }}
                                         />
                                     )}
                                 />
@@ -492,25 +522,27 @@ export function LeaseForm({ }: LeaseFormProps) {
                                     </div>
                                     <div>
                                         <span className="text-gray-600">
-                                            Monthly Rate:
+                                            Payment Method:
                                         </span>{' '}
                                         <span className="font-medium">
-                                            {formatCurrency(
-                                                watchedValues.monthlyRate,
-                                            )}
+                                            {watchedValues.paymentMethod === 'cash' ? 'Cash' :
+                                             watchedValues.paymentMethod === 'pos' ? 'POS (Card Payment)' :
+                                             'Bank Transfer'}
                                         </span>
                                     </div>
-                                    <div>
-                                        <span className="text-gray-600">
-                                            Total Amount:
-                                        </span>{' '}
-                                        <span className="font-medium">
-                                            {formatCurrency(
-                                                watchedValues.monthlyRate *
-                                                    watchedValues.leaseDuration,
-                                            )}
-                                        </span>
-                                    </div>
+                                    {watchedValues.leaseDuration && (
+                                        <div>
+                                            <span className="text-gray-600">
+                                                Expected Return:
+                                            </span>{' '}
+                                            <span className="font-medium">
+                                                {new Date(
+                                                    Date.now() + 
+                                                    watchedValues.leaseDuration * 30 * 24 * 60 * 60 * 1000
+                                                ).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 {watchedValues.notes && (
                                     <div className="mt-3">
@@ -557,6 +589,13 @@ export function LeaseForm({ }: LeaseFormProps) {
 
                     <h3 className="mb-2">Create New Lease</h3>
                 </div>
+
+                {/* Display form-level errors */}
+                {formError && (
+                    <Alert type="danger" className="mb-6">
+                        {formError}
+                    </Alert>
+                )}
 
                 {/* Steps */}
                 <div className="mb-8">

@@ -400,10 +400,10 @@ export default function SwapsPage() {
           compact={true}
           pagingData={{
             total: swapsData?.total || 0,
-            pageIndex: (swapsData?.page || 1) - 1,
+            pageIndex: swapsData?.page || 1,  // Pass 1-based directly - DataTable uses 1-based
             pageSize: filters.limit || 20
           }}
-          onPaginationChange={(page) => handlePageChange(page + 1)}
+          onPaginationChange={(page) => handlePageChange(page)}
           className="min-h-[400px]"
         />
       </Card>

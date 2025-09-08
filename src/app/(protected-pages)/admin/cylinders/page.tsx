@@ -624,11 +624,11 @@ export default function CylindersPage() {
                         loading={isLoading}
                         pagingData={{
                             total: data?.meta?.total || 0,
-                            pageIndex: page - 1,
+                            pageIndex: page,  // Pass 1-based directly - DataTable uses 1-based
                             pageSize: pageSize,
                         }}
-                        onPaginationChange={(pageIndex) =>
-                            setPage(pageIndex + 1)
+                        onPaginationChange={(page) =>
+                            setPage(page)
                         }
                         onSelectChange={setPageSize}
                         noData={!isLoading && cylinders.length === 0}

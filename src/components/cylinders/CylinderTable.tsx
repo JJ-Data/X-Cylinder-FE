@@ -5,17 +5,19 @@ import { StatusBadge, CylinderStatus } from '../shared/StatusBadge'
 import { FiEdit, FiTruck, FiEye } from 'react-icons/fi'
 import { BiQr } from 'react-icons/bi'
 
-type CylinderType = 'SMALL' | 'MEDIUM' | 'LARGE'
+type CylinderType = string // Accept any string value from API
 
 interface Cylinder {
     id: number
-    code: string
-    type: CylinderType
-    capacity: number
-    status: CylinderStatus
-    qrCode: string
-    outletId: number
+    code?: string
+    cylinderCode?: string // API might use this instead of code
+    type: string // Accept any string value from API
+    capacity?: number
+    status: string // Accept any string value from API  
+    qrCode?: string
+    outletId?: number
     outletName?: string
+    currentOutletId?: number // API might use this
     currentLease?: {
         id: number
         customerId: number
@@ -51,13 +53,21 @@ interface SortConfig {
     direction: SortDirection
 }
 
-const cylinderTypeConfig: Record<
-    CylinderType,
-    { label: string; capacity: string }
-> = {
-    SMALL: { label: 'Small', capacity: '12kg' },
-    MEDIUM: { label: 'Medium', capacity: '25kg' },
-    LARGE: { label: 'Large', capacity: '50kg' },
+const cylinderTypeConfig: Record<string, { label: string; capacity: string }> = {
+    // Handle actual API values (weight-based)
+    '5kg': { label: 'Small', capacity: '5kg' },
+    '10kg': { label: 'Medium', capacity: '10kg' },
+    '12kg': { label: 'Medium', capacity: '12kg' },
+    '15kg': { label: 'Medium', capacity: '15kg' },
+    '20kg': { label: 'Large', capacity: '20kg' },
+    '25kg': { label: 'Large', capacity: '25kg' },
+    '45kg': { label: 'Industrial', capacity: '45kg' },
+    '50kg': { label: 'Industrial', capacity: '50kg' },
+    // Fallback for enum values (backward compatibility)
+    'SMALL': { label: 'Small', capacity: '5kg' },
+    'MEDIUM': { label: 'Medium', capacity: '12kg' },
+    'LARGE': { label: 'Large', capacity: '25kg' },
+    'INDUSTRIAL': { label: 'Industrial', capacity: '50kg' },
 }
 
 export const CylinderTable: React.FC<CylinderTableProps> = ({
@@ -240,24 +250,31 @@ export const CylinderTable: React.FC<CylinderTableProps> = ({
                 {sortedCylinders.map((cylinder) => (
                     <Table.Tr key={cylinder.id}>
                         <Table.Td>
-                            <span className="font-medium">{cylinder.code}</span>
+                            <span className="font-medium">
+                                {cylinder.code || cylinder.cylinderCode || `ID-${cylinder.id}`}
+                            </span>
                         </Table.Td>
                         <Table.Td>
                             {(() => {
                                 const config = cylinderTypeConfig[cylinder.type]
+                                if (!config) {
+                                    // Fallback for unknown types
+                                    console.warn(`Unknown cylinder type: ${cylinder.type}`)
+                                    return `${cylinder.type} (Unknown)`
+                                }
                                 return `${config.label} (${config.capacity})`
                             })()}
                         </Table.Td>
                         <Table.Td>
                             <StatusBadge
-                                status={cylinder.status}
+                                status={cylinder.status?.toUpperCase() as any}
                                 type="cylinder"
                             />
                         </Table.Td>
                         {role === 'ADMIN' && (
                             <Table.Td>
                                 {cylinder.outletName ||
-                                    `Outlet ${cylinder.outletId}`}
+                                    `Outlet ${cylinder.outletId || cylinder.currentOutletId || 'Unknown'}`}
                             </Table.Td>
                         )}
                         <Table.Td>

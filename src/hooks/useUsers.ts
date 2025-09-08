@@ -139,23 +139,31 @@ export function useUserMutations() {
 
 // Customer-specific hooks
 export function useCustomerMutations() {
-  // Register customer
+  // Register customer (now auto-activates)
   const registerCustomer = useSWRMutation(
     'register-customer',
     async (_, { arg }: { arg: CustomerRegistrationDto }) => {
-      const response = await customerService.registerCustomer(arg)
-      await mutate(['users'])
-      toast.push(
-        React.createElement(Notification, {
-          title: 'Success',
-          type: 'success'
-        }, 'Customer registered successfully')
-      )
-      return response.data
+      try {
+        const response = await customerService.registerCustomer(arg)
+        await mutate(['users'])
+        toast.push(
+          React.createElement(Notification, {
+            title: 'Success',
+            type: 'success'
+          }, 'Customer registered and activated successfully')
+        )
+        return response.data
+      } catch (error: any) {
+        // Re-throw error with axios structure preserved for proper error handling
+        throw error
+      }
     }
   )
 
-  // Activate customer
+  /**
+   * @deprecated Payment is no longer required. Customers are auto-activated.
+   * Kept for backward compatibility only.
+   */
   const activateCustomer = useSWRMutation(
     'activate-customer',
     async (_, { arg }: { arg: CustomerActivationDto }) => {
@@ -172,7 +180,10 @@ export function useCustomerMutations() {
     }
   )
 
-  // Simulate payment
+  /**
+   * @deprecated Payment simulation no longer needed.
+   * Kept for backward compatibility only.
+   */
   const simulatePayment = useSWRMutation(
     'simulate-payment',
     async (_, { arg }: { arg: { userId: number; amount: number } }) => {

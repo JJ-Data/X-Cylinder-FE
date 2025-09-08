@@ -191,7 +191,7 @@ const OutletTable = ({
 
     const handlePaginationChange = (page: number) => {
         onAppendQueryParams({
-            pageIndex: String(page)
+            pageIndex: String(page)  // No conversion needed - DataTable uses 1-based
         })
     }
 
@@ -217,7 +217,7 @@ const OutletTable = ({
             loading={isInitialLoading}
             pagingData={{
                 total: outletsTotal,
-                pageIndex,
+                pageIndex,  // Pass 1-based directly - DataTable uses 1-based
                 pageSize
             }}
             onPaginationChange={handlePaginationChange}

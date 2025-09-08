@@ -16,7 +16,8 @@ import QRScanner from '@/components/shared/QRScanner'
 import Alert from '@/components/ui/Alert'
 import { useRefillMutations } from '@/hooks/useRefills'
 import { useCylinder } from '@/hooks/useCylinders'
-// import { formatCurrency } from '@/utils/formatCurrency'
+import { handleBackendValidationErrors } from '@/utils/errorHandler'
+import { toast } from 'react-hot-toast'
 import type { ZodType } from 'zod'
 import { formatCurrency } from '@/utils/format'
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -25,7 +26,7 @@ const refillSchema: ZodType<RefillFormData> = z.object({
     cylinderCode: z.string().min(1, 'Cylinder code is required'),
     volume: z.number().min(0.1, 'Volume must be greater than 0'),
     cost: z.number().min(0, 'Cost must be a positive number'),
-    paymentMethod: z.enum(['cash', 'card', 'mobileMoney', 'credit']),
+    paymentMethod: z.enum(['cash', 'pos', 'bank_transfer']),
     paymentReference: z.string().optional(),
     notes: z.string().optional(),
 })
@@ -34,16 +35,15 @@ type RefillFormData = {
     cylinderCode: string
     volume: number
     cost: number
-    paymentMethod: 'cash' | 'card' | 'mobileMoney' | 'credit'
+    paymentMethod: 'cash' | 'pos' | 'bank_transfer'
     paymentReference?: string
     notes?: string
 }
 
 const paymentMethodOptions = [
     { value: 'cash', label: 'Cash' },
-    { value: 'card', label: 'Card' },
-    { value: 'mobileMoney', label: 'Mobile Money' },
-    { value: 'credit', label: 'Credit' },
+    { value: 'pos', label: 'POS (Card Payment)' },
+    { value: 'bank_transfer', label: 'Bank Transfer' },
 ]
 
 interface RefillFormProps {
@@ -55,6 +55,7 @@ export function RefillForm({}: RefillFormProps) {
     const [showQRScanner, setShowQRScanner] = useState(false)
     const [cylinderId, setCylinderId] = useState<number | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [formError, setFormError] = useState<string | null>(null)
 
     const { createRefill } = useRefillMutations()
     const { data: cylinder } = useCylinder(cylinderId || undefined)
@@ -65,6 +66,7 @@ export function RefillForm({}: RefillFormProps) {
         control,
         watch,
         setValue,
+        setError,
     } = useForm<RefillFormData>({
         defaultValues: {
             cylinderCode: '',
@@ -98,15 +100,81 @@ export function RefillForm({}: RefillFormProps) {
     const onSubmit = async (data: RefillFormData) => {
         setIsSubmitting(true)
         try {
+            setFormError(null) // Clear any previous errors
+            
             // In real implementation, get cylinderId from cylinder lookup
             const refillData = {
-                ...data,
                 cylinderId: cylinderId || 1,
+                preRefillVolume: data.volume, // Map volume to pre and post refill volumes
+                postRefillVolume: data.volume, // This should be calculated based on actual refill
+                refillCost: data.cost,
+                paymentMethod: data.paymentMethod,
+                paymentReference: data.paymentReference || undefined,
+                notes: data.notes || undefined, // Convert empty string to undefined
             }
-            await createRefill(refillData)
-            router.push('/refill-operator/refills')
-        } catch (error) {
-            console.error('Failed to create refill:', error)
+            
+            console.log('Submitting refill data:', refillData)
+            const result = await createRefill(refillData)
+            
+            // Navigate to receipt page if successful
+            if (result && result.id) {
+                toast.success('Refill recorded successfully!')
+                // Navigate to receipt page for printing
+                router.push(`/refill-operator/refills/${result.id}/receipt`)
+            }
+        } catch (error: any) {
+            // Comprehensive error logging for debugging
+            console.error('=== REFILL FORM ERROR DEBUG ===')
+            console.error('Full error object:', error)
+            console.error('Error type:', typeof error)
+            console.error('Is AxiosError?:', error?.isAxiosError)
+            console.error('Error response:', error?.response)
+            console.error('Error response data:', error?.response?.data)
+            console.error('Error response status:', error?.response?.status)
+            console.error('Error message:', error?.message)
+            console.error('================================')
+            
+            let errorMessage = 'An error occurred while creating the refill'
+            
+            // Try multiple error extraction methods
+            if (error?.response?.data) {
+                // Standard axios error with response
+                errorMessage = handleBackendValidationErrors(error, setError)
+                console.log('Handled as Axios error, message:', errorMessage)
+            } else if (error?.data?.error) {
+                // Possibly proxy-wrapped error
+                errorMessage = error.data.error
+                console.log('Handled as proxy error, message:', errorMessage)
+                
+                // Also try to set field errors if they exist
+                if (error.data.errors && setError) {
+                    Object.entries(error.data.errors).forEach(([field, messages]: [string, any]) => {
+                        if (Array.isArray(messages) && messages.length > 0) {
+                            setError(field as any, {
+                                type: 'manual',
+                                message: messages[0]
+                            })
+                        }
+                    })
+                }
+            } else if (error?.message) {
+                // Generic error with message
+                errorMessage = error.message
+                console.log('Handled as generic error, message:', errorMessage)
+            }
+            
+            // Ensure error is displayed
+            console.log('Setting form error:', errorMessage)
+            setFormError(errorMessage)
+            
+            // Scroll to top to show the error alert
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            
+            // Show toast notification
+            toast.error(errorMessage, {
+                duration: 5000, // Show for 5 seconds
+                position: 'top-center'
+            })
         } finally {
             setIsSubmitting(false)
         }
@@ -135,6 +203,16 @@ export function RefillForm({}: RefillFormProps) {
 
                         <h3 className="mb-2">Process Refill</h3>
                     </div>
+
+                    {/* Display form-level errors */}
+                    {formError && (
+                        <Alert type="danger" className="mb-6" showIcon>
+                            <div>
+                                <p className="font-semibold">Error Creating Refill</p>
+                                <p>{formError}</p>
+                            </div>
+                        </Alert>
+                    )}
 
                     <div className="flex flex-col gap-4">
                         {/* Cylinder Selection Section */}

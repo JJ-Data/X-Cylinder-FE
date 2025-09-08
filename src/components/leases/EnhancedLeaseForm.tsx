@@ -18,25 +18,36 @@ import { useCylinders } from '@/hooks/useCylinders'
 import { useLeaseMutations } from '@/hooks/useLeases'
 import { useSession } from 'next-auth/react'
 import { toast } from 'react-hot-toast'
+import { handleBackendValidationErrors } from '@/utils/errorHandler'
 import type { CreateLeaseDto } from '@/services/api/lease.service'
 import type {  } from '@/types/cylinder'
+import { useAuthStore } from '@/stores'
 
 const leaseSchema = z.object({
   customerId: z.number().min(1, 'Customer is required'),
   cylinderId: z.number().min(1, 'Cylinder is required'),
   depositAmount: z.number().min(0, 'Deposit must be a positive number'),
-  leaseAmount: z.number().min(0, 'Lease amount must be a positive number'),
+  paymentMethod: z.enum(['cash', 'pos', 'bank_transfer'], {
+    required_error: 'Payment method is required',
+  }),
+  expectedReturnDate: z.string().optional(),
   notes: z.string().optional()
 })
 
 type LeaseFormData = z.infer<typeof leaseSchema>
 
-export function EnhancedLeaseForm() {
+interface EnhancedLeaseFormProps {
+  redirectPath?: string
+}
+
+export function EnhancedLeaseForm({ redirectPath }: EnhancedLeaseFormProps = {}) {
   const router = useRouter()
   const { data: session } = useSession()
+  const { activeRole, outletId } = useAuthStore()
   const [search, setSearch] = useState('')
   const [searchCylinder, setSearchCylinder] = useState('')
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   
   // API hooks
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
@@ -47,7 +58,9 @@ export function EnhancedLeaseForm() {
   const { data: cylindersData, isLoading: loadingCylinders } = useCylinders({
     code: searchCylinder,
     status: 'available', // Only show available cylinders (lowercase)
-    limit: 10
+    limit: 10,
+    // Only filter by outlet for staff users - admins can see all cylinders
+    outletId: activeRole === 'STAFF' && outletId ? parseInt(outletId) : undefined,
   })
   
   const { createLease } = useLeaseMutations()
@@ -58,6 +71,7 @@ export function EnhancedLeaseForm() {
     formState: { errors, isSubmitting },
     watch,
     setValue,
+    setError,
     reset: _reset
   } = useForm<LeaseFormData>({
     resolver: zodResolver(leaseSchema),
@@ -65,7 +79,8 @@ export function EnhancedLeaseForm() {
       customerId: 0,
       cylinderId: 0,
       depositAmount: 5000, // Default deposit
-      leaseAmount: 1500, // Default monthly rate
+      paymentMethod: 'cash' as const,
+      expectedReturnDate: '', // Optional - user can set if needed
       notes: ''
     }
   })
@@ -80,18 +95,31 @@ export function EnhancedLeaseForm() {
   
   const onSubmit = async (data: LeaseFormData) => {
     try {
+      setFormError(null) // Clear any previous errors
       const leaseData: CreateLeaseDto = {
         customerId: data.customerId,
         cylinderId: data.cylinderId,
         depositAmount: data.depositAmount,
-        leaseAmount: data.leaseAmount,
-        notes: data.notes
+        leaseAmount: data.depositAmount, // Using deposit amount as lease amount for now
+        paymentMethod: data.paymentMethod,
+        notes: data.notes || undefined // Convert empty string to undefined
       }
       
-      await createLease.trigger(leaseData)
-      router.push('/admin/leases')
+      const result = await createLease.trigger(leaseData)
+      
+      // Determine redirect path based on user role or provided path
+      const userRole = session?.user?.role
+      const basePath = redirectPath || (userRole === 'ADMIN' ? '/admin/leases' : '/staff/leasing')
+      
+      if (result?.id) {
+        router.push(`${basePath}/${result.id}`)
+      } else {
+        router.push(basePath)
+      }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create lease')
+      const errorMessage = handleBackendValidationErrors(error, setError)
+      setFormError(errorMessage)
+      toast.error(errorMessage)
     }
   }
   
@@ -125,6 +153,13 @@ export function EnhancedLeaseForm() {
   
   return (
     <div className="grid gap-6">
+      {/* Display form-level errors */}
+      {formError && (
+        <Alert type="danger" className="mb-4">
+          {formError}
+        </Alert>
+      )}
+      
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Customer Selection */}
@@ -225,9 +260,9 @@ export function EnhancedLeaseForm() {
           </Card>
         </div>
         
-        {/* Lease Terms */}
+        {/* Payment Details */}
         <Card className="mt-6">
-          <h4 className="mb-4">Lease Terms</h4>
+          <h4 className="mb-4">Payment Details</h4>
           
           <div className="grid md:grid-cols-2 gap-4">
             <FormItem
@@ -252,21 +287,53 @@ export function EnhancedLeaseForm() {
             </FormItem>
             
             <FormItem
-              label="Monthly Lease Amount (₦)"
-              invalid={Boolean(errors.leaseAmount)}
-              errorMessage={errors.leaseAmount?.message}
+              label="Payment Method"
+              invalid={Boolean(errors.paymentMethod)}
+              errorMessage={errors.paymentMethod?.message}
               asterisk
             >
               <Controller
-                name="leaseAmount"
+                name="paymentMethod"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    options={[
+                      { value: 'cash', label: 'Cash' },
+                      { value: 'pos', label: 'POS (Card Payment)' },
+                      { value: 'bank_transfer', label: 'Bank Transfer' },
+                    ]}
+                    placeholder="Select payment method"
+                    value={
+                      field.value
+                        ? { value: field.value, label: 
+                            field.value === 'cash' ? 'Cash' :
+                            field.value === 'pos' ? 'POS (Card Payment)' :
+                            'Bank Transfer'
+                          }
+                        : null
+                    }
+                    onChange={(option: any) => {
+                      field.onChange(option?.value || 'cash')
+                    }}
+                  />
+                )}
+              />
+            </FormItem>
+            
+            <FormItem
+              label="Expected Return Date (Optional)"
+              invalid={Boolean(errors.expectedReturnDate)}
+              errorMessage={errors.expectedReturnDate?.message}
+            >
+              <Controller
+                name="expectedReturnDate"
                 control={control}
                 render={({ field }) => (
                   <Input
                     {...field}
-                    type="number"
-                    placeholder="Enter monthly amount"
-                    prefix="₦"
-                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
                   />
                 )}
               />
@@ -296,29 +363,35 @@ export function EnhancedLeaseForm() {
           {/* Summary */}
           {selected && selectedCylinder && (
             <div className="mt-6 p-4 bg-gray-50 rounded">
-              <h5 className="font-semibold mb-2">Lease Summary</h5>
+              <h5 className="font-semibold mb-2">Transaction Summary</h5>
               <div className="grid md:grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-gray-600">Total Initial Payment:</span>{' '}
+                  <span className="text-gray-600">Security Deposit:</span>{' '}
                   <span className="font-medium">
-                    ₦{(watchedValues.depositAmount + watchedValues.leaseAmount).toLocaleString()}
+                    ₦{watchedValues.depositAmount.toLocaleString()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Monthly Payment:</span>{' '}
+                  <span className="text-gray-600">Payment Method:</span>{' '}
                   <span className="font-medium">
-                    ₦{watchedValues.leaseAmount.toLocaleString()}
+                    {watchedValues.paymentMethod === 'cash' ? 'Cash' :
+                     watchedValues.paymentMethod === 'pos' ? 'POS (Card Payment)' :
+                     'Bank Transfer'}
                   </span>
                 </div>
+                {watchedValues.expectedReturnDate && (
+                  <div>
+                    <span className="text-gray-600">Expected Return:</span>{' '}
+                    <span className="font-medium">
+                      {new Date(watchedValues.expectedReturnDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <span className="text-gray-600">Processed by:</span>{' '}
                   <span className="font-medium">
                     {(session?.user as any)?.firstName} {(session?.user as any)?.lastName}
                   </span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Date:</span>{' '}
-                  <span className="font-medium">{new Date().toLocaleDateString()}</span>
                 </div>
               </div>
             </div>

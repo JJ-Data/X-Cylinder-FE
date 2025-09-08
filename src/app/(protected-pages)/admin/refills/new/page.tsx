@@ -23,6 +23,7 @@ import CylinderQRScanner from '@/components/cylinders/CylinderQRScanner'
 import { useSession } from 'next-auth/react'
 import { toast } from 'react-hot-toast'
 import type { CreateRefillDto } from '@/services/api/refill.service'
+import { handleBackendValidationErrors } from '@/utils/errorHandler'
 
 const refillSchema = z
     .object({
@@ -37,6 +38,8 @@ const refillSchema = z
             .number()
             .min(0, 'Cost must be a positive number')
             .optional(),
+        paymentMethod: z.enum(['cash', 'pos', 'bank_transfer']).default('cash'),
+        paymentReference: z.string().optional(),
         notes: z.string().optional(),
         batchNumber: z.string().optional(),
     })
@@ -44,6 +47,19 @@ const refillSchema = z
         message: 'Post-refill volume must be greater than pre-refill volume',
         path: ['postRefillVolume'],
     })
+    .refine(
+        (data) => {
+            // Payment reference required for non-cash payments
+            if (data.paymentMethod !== 'cash' && !data.paymentReference) {
+                return false
+            }
+            return true
+        },
+        {
+            message: 'Payment reference is required for non-cash payments',
+            path: ['paymentReference'],
+        }
+    )
 
 type RefillFormData = z.infer<typeof refillSchema>
 
@@ -68,6 +84,7 @@ export default function NewRefillPage() {
     const [searchCylinder, setSearchCylinder] = useState('')
     const [scanDialogOpen, setScanDialogOpen] = useState(false)
     const [scannedCylinder, setScannedCylinder] = useState<any>(null)
+    const [formError, setFormError] = useState<string | null>(null)
 
     // API hooks - add outletId for proper filtering
     const { data: cylindersData, isLoading: loadingCylinders } = useCylinders({
@@ -85,6 +102,7 @@ export default function NewRefillPage() {
         watch,
         setValue,
         reset,
+        setError,
     } = useForm<RefillFormData>({
         resolver: zodResolver(refillSchema),
         defaultValues: {
@@ -92,6 +110,8 @@ export default function NewRefillPage() {
             preRefillVolume: 0,
             postRefillVolume: 0,
             refillCost: 0,
+            paymentMethod: 'cash',
+            paymentReference: '',
             notes: '',
             batchNumber: generateBatchNumber(),
         },
@@ -128,20 +148,39 @@ export default function NewRefillPage() {
 
     const onSubmit = async (data: RefillFormData) => {
         try {
+            setFormError(null) // Clear any previous errors
+            
             const refillData: CreateRefillDto = {
                 cylinderId: data.cylinderId,
                 preRefillVolume: data.preRefillVolume,
                 postRefillVolume: data.postRefillVolume,
                 refillCost: data.refillCost,
+                paymentMethod: data.paymentMethod,
+                paymentReference: data.paymentReference || undefined,
                 notes: data.notes,
                 batchNumber: data.batchNumber,
             }
 
-            await createRefill(refillData)
+            const result = await createRefill(refillData)
             toast.success('Refill recorded successfully')
-            router.push('/admin/refills')
+            // Navigate to receipt page for printing
+            if (result && result.id) {
+                router.push(`/admin/refills/${result.id}/receipt`)
+            } else {
+                router.push('/admin/refills')
+            }
         } catch (error: any) {
-            toast.error(error.message || 'Failed to record refill')
+            console.error('Refill creation error:', error)
+            
+            // Extract error message using the error handler utility
+            const errorMessage = handleBackendValidationErrors(error, setError)
+            setFormError(errorMessage)
+            
+            // Scroll to top to show the error alert
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            
+            // Also show toast for immediate feedback
+            toast.error(errorMessage)
         }
     }
 
@@ -199,6 +238,16 @@ export default function NewRefillPage() {
                     Log a new gas refill operation
                 </p>
             </div>
+
+            {/* Display form-level errors */}
+            {formError && (
+                <Alert type="danger" className="mb-6" showIcon>
+                    <div>
+                        <p className="font-semibold">Error Creating Refill</p>
+                        <p>{formError}</p>
+                    </div>
+                </Alert>
+            )}
 
             <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="grid lg:grid-cols-2 gap-6">
@@ -421,6 +470,65 @@ export default function NewRefillPage() {
                     </Card>
                 </div>
 
+                {/* Payment Information */}
+                <Card className="mt-6">
+                    <h4 className="mb-4">Payment Information</h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <FormItem
+                            label="Payment Method"
+                            invalid={Boolean(errors.paymentMethod)}
+                            errorMessage={errors.paymentMethod?.message}
+                            asterisk
+                        >
+                            <Controller
+                                name="paymentMethod"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select
+                                        {...field}
+                                        options={[
+                                            { value: 'cash', label: 'Cash' },
+                                            { value: 'pos', label: 'POS (Card Payment)' },
+                                            { value: 'bank_transfer', label: 'Bank Transfer' },
+                                        ]}
+                                        placeholder="Select payment method"
+                                        value={
+                                            [
+                                                { value: 'cash', label: 'Cash' },
+                                                { value: 'pos', label: 'POS (Card Payment)' },
+                                                { value: 'bank_transfer', label: 'Bank Transfer' },
+                                            ].find((opt) => opt.value === field.value) || null
+                                        }
+                                        onChange={(option) =>
+                                            field.onChange(option?.value || 'cash')
+                                        }
+                                    />
+                                )}
+                            />
+                        </FormItem>
+
+                        {watchedValues.paymentMethod !== 'cash' && (
+                            <FormItem
+                                label="Payment Reference"
+                                invalid={Boolean(errors.paymentReference)}
+                                errorMessage={errors.paymentReference?.message}
+                                asterisk
+                            >
+                                <Controller
+                                    name="paymentReference"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Input
+                                            {...field}
+                                            placeholder="Enter transaction reference"
+                                        />
+                                    )}
+                                />
+                            </FormItem>
+                        )}
+                    </div>
+                </Card>
+
                 {/* Notes */}
                 <Card className="mt-6">
                     <FormItem
@@ -519,6 +627,22 @@ export default function NewRefillPage() {
                                         'Current User'}
                                 </span>
                             </div>
+                            <div>
+                                <span className="text-gray-600">Payment Method:</span>{' '}
+                                <span className="font-medium">
+                                    {watchedValues.paymentMethod === 'cash' ? 'Cash' :
+                                     watchedValues.paymentMethod === 'pos' ? 'POS (Card Payment)' :
+                                     'Bank Transfer'}
+                                </span>
+                            </div>
+                            {watchedValues.paymentReference && (
+                                <div>
+                                    <span className="text-gray-600">Reference:</span>{' '}
+                                    <span className="font-medium">
+                                        {watchedValues.paymentReference}
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Capacity check */}

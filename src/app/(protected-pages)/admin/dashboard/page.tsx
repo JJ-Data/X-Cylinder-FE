@@ -282,19 +282,6 @@ export default function AdminDashboard() {
                     <div>
                         <p className="font-semibold">Failed to load dashboard metrics</p>
                         <p className="text-sm mt-1">Error: {error.message || 'Unknown error occurred'}</p>
-                        {process.env.NODE_ENV === 'development' && (
-                            <details className="mt-2">
-                                <summary className="cursor-pointer text-sm font-medium">Debug Information</summary>
-                                <pre className="text-xs mt-1 p-2 bg-gray-100 rounded overflow-auto">
-                                    {JSON.stringify({
-                                        errorDetails: error,
-                                        sessionStatus: status,
-                                        hasAccessToken: !!accessToken,
-                                        apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'Not set'
-                                    }, null, 2)}
-                                </pre>
-                            </details>
-                        )}
                         <div className="flex gap-2 mt-3">
                             <Button
                                 size="sm"

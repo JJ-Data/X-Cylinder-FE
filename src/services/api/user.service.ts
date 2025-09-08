@@ -63,6 +63,15 @@ export const userService = {
   async getUserActivity(id: number, page = 1, pageSize = 20) {
     const response = await apiClient.get(`/users/${id}/activity?page=${page}&pageSize=${pageSize}`)
     return response.data
+  },
+
+  // Change current user's password
+  async changePassword(currentPassword: string, newPassword: string) {
+    const response = await apiClient.patch('/users/password', { 
+      currentPassword, 
+      newPassword 
+    })
+    return response.data
   }
 }
 
@@ -74,13 +83,20 @@ export const customerService = {
     return response.data
   },
 
-  // Activate customer account
+  /**
+   * @deprecated Payment is no longer required for customer registration.
+   * Customers are automatically activated upon registration.
+   * This method is kept for backward compatibility only.
+   */
   async activateCustomer(data: CustomerActivationDto) {
     const response = await apiClient.post('/customers/activate', data)
     return response.data
   },
 
-  // Simulate payment for customer
+  /**
+   * @deprecated Payment simulation is no longer needed.
+   * This method is kept for backward compatibility only.
+   */
   async simulatePayment(userId: number, amount: number) {
     const response = await apiClient.post('/customers/simulate-payment', {
       userId,

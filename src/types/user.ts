@@ -78,8 +78,8 @@ export interface UserFilters {
 
 export interface CustomerRegistrationDto {
   email: string
-  name: string
-  password: string
+  firstName: string
+  lastName: string
   phoneNumber: string
   alternatePhone?: string
   address: string

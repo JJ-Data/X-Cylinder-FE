@@ -4,6 +4,18 @@ import Credentials from 'next-auth/providers/credentials'
 
 import type { SignInCredential } from '@/@types/auth'
 
+// Role mapping utility: backend format → frontend format
+function mapBackendRoleToFrontend(backendRole: string): string {
+    const roleMapping: Record<string, string> = {
+        'admin': 'ADMIN',
+        'staff': 'STAFF', 
+        'refill_operator': 'REFILL_OP',
+        'customer': 'CUSTOMER'
+    }
+    
+    return roleMapping[backendRole?.toLowerCase()] || backendRole?.toUpperCase() || 'CUSTOMER'
+}
+
 export default {
     providers: [
         // Removing OAuth providers for now as CylinderX uses JWT auth
@@ -49,17 +61,19 @@ export default {
     ],
     callbacks: {
         async jwt({ token, user, trigger, session }) {
-            console.log('[Auth Config] JWT callback triggered:', {
-                trigger,
-                hasUser: !!user,
-                hasToken: !!token,
-                tokenSub: token?.sub,
-                hasSession: !!session,
-                timestamp: new Date().toISOString(),
-            })
-            
-            // Store user data in token on first login
-            if (user) {
+            try {
+                console.log('[Auth Config] ===== JWT CALLBACK START =====')
+                console.log('[Auth Config] JWT callback triggered:', {
+                    trigger,
+                    hasUser: !!user,
+                    hasToken: !!token,
+                    tokenSub: token?.sub,
+                    hasSession: !!session,
+                    timestamp: new Date().toISOString(),
+                })
+                
+                // Store user data in token on first login
+                if (user) {
                 console.log('[Auth Config] JWT callback - storing user data:', {
                     id: user.id,
                     email: user.email,
@@ -89,41 +103,63 @@ export default {
                 timestamp: new Date().toISOString(),
             })
             
-            return token
+                console.log('[Auth Config] ===== JWT CALLBACK END =====')
+                return token
+            } catch (error) {
+                console.error('[Auth Config] ❌ JWT CALLBACK ERROR:', error)
+                console.log('[Auth Config] ===== JWT CALLBACK FAILED =====')
+                throw error
+            }
         },
         async session({ session, token }) {
-            console.log('[Auth Config] Session callback called:', {
-                hasSession: !!session,
-                hasToken: !!token,
-                tokenSub: token?.sub,
-                tokenRole: token?.role,
-                tokenOutletId: token?.outletId,
-                tokenStatus: token?.status,
-                hasAccessToken: !!token?.accessToken
-            })
+            try {
+                console.log('[Auth Config] ===== SESSION CALLBACK START =====')
+                console.log('[Auth Config] Session callback called:', {
+                    hasSession: !!session,
+                    hasToken: !!token,
+                    tokenId: token?.id,
+                    tokenSub: token?.sub,
+                    tokenRole: token?.role,
+                    tokenOutletId: token?.outletId,
+                    tokenStatus: token?.status,
+                    hasAccessToken: !!token?.accessToken,
+                    timestamp: new Date().toISOString()
+                })
             
             // Add complete user data to session for dashboard
+            const backendRole = token.role as string || 'customer'
+            const frontendRole = mapBackendRoleToFrontend(backendRole)
+            
             const updatedSession = {
                 ...session,
                 user: {
                     ...session.user,
                     id: token.sub || '',
-                    authority: [token.role as string || 'customer'],
-                    role: (token.role as string || 'CUSTOMER') as 'CUSTOMER' | 'STAFF' | 'OPERATOR' | 'ADMIN',
+                    authority: [frontendRole], // Use frontend role for UI access control
+                    role: frontendRole, // Frontend role for UI components (ADMIN, OPERATOR, etc.)
+                    backendRole: backendRole, // Keep backend role for API calls
                     outletId: token.outletId as string,
                     status: (token.status as string || 'ACTIVE') as 'PENDING' | 'ACTIVE' | 'INACTIVE',
                 },
-                // Include the backend JWT token in the session
+                // Include the backend JWT token in the session (contains backend role)
                 accessToken: token.accessToken as string,
             }
             
             console.log('[Auth Config] Session callback - final session:', {
-                userRole: updatedSession.user.role,
+                backendRole: updatedSession.user.backendRole,
+                frontendRole: updatedSession.user.role,
                 authority: updatedSession.user.authority,
-                hasAccessToken: !!updatedSession.accessToken
+                hasAccessToken: !!updatedSession.accessToken,
+                timestamp: new Date().toISOString()
             })
             
-            return updatedSession
+                console.log('[Auth Config] ===== SESSION CALLBACK END =====')
+                return updatedSession
+            } catch (error) {
+                console.error('[Auth Config] ❌ SESSION CALLBACK ERROR:', error)
+                console.log('[Auth Config] ===== SESSION CALLBACK FAILED =====')
+                throw error
+            }
         },
     },
     session: {

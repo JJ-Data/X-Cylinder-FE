@@ -1,240 +1,301 @@
 'use client'
 
-import { useState } from 'react'
-import { HiDownload, HiPrinter, HiX, HiClipboard } from 'react-icons/hi'
-import Dialog from '@/components/ui/Dialog'
+import React, { useRef } from 'react'
+import {
+    PiXDuotone,
+    PiDownloadDuotone,
+    PiPrinterDuotone,
+    PiQrCodeDuotone,
+    PiCopyDuotone,
+} from 'react-icons/pi'
 import Button from '@/components/ui/Button'
-import Card from '@/components/ui/Card'
-import Badge from '@/components/ui/Badge'
-import Loading from '@/components/shared/Loading'
-import { qrService } from '@/services/api/qr.service'
 import { toast } from 'react-hot-toast'
-import type { Cylinder } from '@/types/cylinder'
-import type { QRCodeData } from '@/services/api/qr.service'
 
+// New simplified interface for the modal
 interface QRCodeModalProps {
-  isOpen: boolean
-  onClose: () => void
-  cylinder: Cylinder
-  qrCodeData: QRCodeData | null
-  isLoading: boolean
+    qrCode: string
+    cylinderCode: string
+    dataURL?: string | null  // Base64 encoded QR code image from backend
+    onClose: () => void
 }
 
-export default function QRCodeModal({
-  isOpen,
-  onClose,
-  cylinder,
-  qrCodeData,
-  isLoading,
-}: QRCodeModalProps) {
-  const [downloading, setDownloading] = useState(false)
+// Legacy interface for backward compatibility
+interface LegacyQRCodeModalProps {
+    isOpen: boolean
+    onClose: () => void
+    cylinder: any
+    qrCodeData: any | null
+    isLoading: boolean
+}
 
-  const handleDownload = async (format: 'png' | 'svg') => {
-    if (!cylinder) return
+// New QR Code Modal component
+export const QRCodeModal: React.FC<QRCodeModalProps> = ({
+    qrCode,
+    cylinderCode,
+    dataURL,
+    onClose,
+}) => {
+    const qrRef = useRef<HTMLDivElement>(null)
 
-    setDownloading(true)
-    try {
-      const blob = await qrService.downloadCylinderQRCode(cylinder.id, format)
-      const filename = `cylinder-${cylinder.cylinderCode}-qr.${format}`
-      qrService.downloadQRImage(blob, filename)
-      toast.success(`QR code downloaded as ${format.toUpperCase()}`)
-    } catch (error) {
-      console.error('Download error:', error)
-      toast.error('Failed to download QR code')
-    } finally {
-      setDownloading(false)
-    }
-  }
-
-  const handlePrint = () => {
-    if (!qrCodeData) return
-
-    const printWindow = window.open('', '_blank', 'width=600,height=800')
-    
-    if (!printWindow) {
-      toast.error('Please allow popups to print the QR code')
-      return
-    }
-
-    const printContent = `
-      <html>
-        <head>
-          <title>QR Code - ${cylinder.cylinderCode}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-            }
-            .container {
-              text-align: center;
-              padding: 20px;
-            }
-            .qr-image {
-              width: 300px;
-              height: 300px;
-              margin: 20px auto;
-            }
-            .info {
-              margin: 10px 0;
-              font-size: 18px;
-            }
-            .code {
-              font-size: 24px;
-              font-weight: bold;
-              margin: 20px 0;
-            }
-            @media print {
-              body { margin: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Cylinder QR Code</h1>
-            <img src="${qrCodeData.dataURL}" alt="QR Code" class="qr-image" />
-            <div class="code">${cylinder.cylinderCode}</div>
-            <div class="info">Type: ${cylinder.type}</div>
-            <div class="info">QR: ${cylinder.qrCode}</div>
-          </div>
-        </body>
-      </html>
-    `
-
-    printWindow.document.write(printContent)
-    printWindow.document.close()
-    
-    // Wait for the content to load before printing
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.focus()
-        printWindow.print()
-        
-        // Close window after printing
-        printWindow.onafterprint = () => {
-          printWindow.close()
+    const handleCopyCode = async () => {
+        try {
+            await navigator.clipboard.writeText(qrCode)
+            toast.success('QR code copied to clipboard')
+        } catch (error) {
+            toast.error('Failed to copy QR code')
         }
-      }, 250)
     }
-  }
 
-  const handleCopyQRCode = () => {
-    if (!cylinder.qrCode) return
+    const handleDownload = () => {
+        if (!dataURL) {
+            toast.error('QR code not available for download')
+            return
+        }
 
-    navigator.clipboard.writeText(cylinder.qrCode).then(() => {
-      toast.success('QR code copied to clipboard')
-    }).catch(() => {
-      toast.error('Failed to copy QR code')
-    })
-  }
+        // Create a canvas to add text below the QR code
+        const img = new Image()
+        img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
 
-  return (
-    <Dialog isOpen={isOpen} onClose={onClose} width={500}>
-      <div className="flex items-center justify-between mb-4">
-        <h4>QR Code</h4>
-        <Button
-          size="sm"
-          variant="plain"
-          shape="circle"
-          icon={<HiX />}
-          onClick={onClose}
-        />
-      </div>
+            const size = 400
+            const padding = 40
+            const textHeight = 100
+            
+            canvas.width = size
+            canvas.height = size + textHeight
 
-      <Loading loading={isLoading}>
-        {qrCodeData ? (
-          <>
-            <Card className="text-center mb-4">
-              <img
-                src={qrCodeData.dataURL}
-                alt="QR Code"
-                className="w-64 h-64 mx-auto mb-4"
-              />
-              <div className="space-y-2">
-                <h5 className="text-lg font-semibold">{cylinder.cylinderCode}</h5>
-                <div className="flex items-center justify-center gap-2">
-                  <Badge
-                    content={cylinder.type}
-                    innerClass="bg-blue-500 text-white"
-                  />
-                  <Badge
-                    content={cylinder.status.charAt(0).toUpperCase() + cylinder.status.slice(1)}
-                    innerClass={getCylinderStatusClass(cylinder.status)}
-                  />
+            // White background
+            ctx.fillStyle = 'white'
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+            // Draw the QR code image
+            const qrSize = size - (padding * 2)
+            ctx.drawImage(img, padding, padding, qrSize, qrSize)
+
+            // Add cylinder code text
+            ctx.fillStyle = 'black'
+            ctx.font = 'bold 20px Arial'
+            ctx.textAlign = 'center'
+            ctx.fillText(cylinderCode, size / 2, size + 35)
+            
+            // Add QR code value text
+            ctx.font = '14px monospace'
+            ctx.fillStyle = '#666'
+            ctx.fillText(qrCode, size / 2, size + 60)
+            
+            // Add timestamp
+            ctx.font = '12px Arial'
+            ctx.fillStyle = '#999'
+            ctx.fillText(`Generated: ${new Date().toLocaleString()}`, size / 2, size + 85)
+
+            // Download
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const url = URL.createObjectURL(blob)
+                    const link = document.createElement('a')
+                    link.download = `${cylinderCode}-qr-code.png`
+                    link.href = url
+                    link.click()
+                    URL.revokeObjectURL(url)
+                    toast.success('QR code downloaded')
+                }
+            })
+        }
+        
+        img.src = dataURL
+    }
+
+    const handlePrint = () => {
+        if (!dataURL) {
+            toast.error('QR code not available for printing')
+            return
+        }
+
+        const printContent = `
+            <div style="display: flex; flex-direction: column; align-items: center; padding: 40px; font-family: Arial, sans-serif;">
+                <h2 style="margin-bottom: 20px; color: #374151;">Cylinder QR Code</h2>
+                <div style="width: 300px; height: 300px; margin-bottom: 20px; padding: 10px; background: white; border: 2px solid #e5e7eb;">
+                    <img src="${dataURL}" style="width: 100%; height: 100%; object-fit: contain;" alt="QR Code">
                 </div>
-                <div className="text-sm text-gray-600 font-mono">
-                  {cylinder.qrCode}
-                </div>
-              </div>
-            </Card>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="solid"
-                icon={<HiDownload />}
-                onClick={() => handleDownload('png')}
-                loading={downloading}
-                disabled={downloading}
-              >
-                Download PNG
-              </Button>
-              <Button
-                variant="plain"
-                icon={<HiDownload />}
-                onClick={() => handleDownload('svg')}
-                loading={downloading}
-                disabled={downloading}
-              >
-                Download SVG
-              </Button>
-              <Button
-                variant="plain"
-                icon={<HiPrinter />}
-                onClick={handlePrint}
-                className="col-span-1"
-              >
-                Print
-              </Button>
-              <Button
-                variant="plain"
-                icon={<HiClipboard />}
-                onClick={handleCopyQRCode}
-                className="col-span-1"
-              >
-                Copy Code
-              </Button>
+                <p style="font-size: 20px; font-weight: bold; margin: 10px 0; color: #111827;">${cylinderCode}</p>
+                <p style="font-size: 14px; color: #6b7280; font-family: monospace; word-break: break-all; max-width: 300px; text-align: center;">${qrCode}</p>
+                <p style="font-size: 12px; color: #9ca3af; margin-top: 40px;">Generated by CylinderX System</p>
+                <p style="font-size: 11px; color: #9ca3af;">${new Date().toLocaleString()}</p>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Loading QR code...</p>
-          </div>
-        )}
-      </Loading>
-    </Dialog>
-  )
+        `
+
+        const printWindow = window.open('', '_blank')
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>QR Code - ${cylinderCode}</title>
+                        <style>
+                            body { margin: 0; padding: 0; }
+                            @media print {
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent}
+                    </body>
+                </html>
+            `)
+            printWindow.document.close()
+            
+            // Wait for image to load before printing
+            setTimeout(() => {
+                printWindow.print()
+                toast.success('QR code sent to printer')
+            }, 500)
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                        <PiQrCodeDuotone className="h-6 w-6 mr-2 text-blue-600" />
+                        QR Code
+                    </h2>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <PiXDuotone className="h-6 w-6" />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                    <div className="text-center">
+                        <div className="mb-4">
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                {cylinderCode}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                Scan this QR code to access cylinder information
+                            </p>
+                        </div>
+
+                        {/* QR Code Display */}
+                        <div 
+                            ref={qrRef}
+                            className="w-64 h-64 bg-gray-100 rounded-lg mx-auto mb-6 flex items-center justify-center border-2 border-gray-300 p-4"
+                        >
+                            {dataURL ? (
+                                <img 
+                                    src={dataURL} 
+                                    alt="QR Code for {cylinderCode}"
+                                    className="w-full h-full object-contain"
+                                />
+                            ) : (
+                                <div className="text-center">
+                                    <PiQrCodeDuotone className="h-24 w-24 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">QR Code Not Available</p>
+                                    <p className="text-xs text-gray-400 mt-1 font-mono break-all px-4">
+                                        {qrCode}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* QR Code Value */}
+                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                            <p className="text-sm text-gray-600 mb-2">QR Code Value:</p>
+                            <p className="font-mono text-sm text-gray-900 break-all bg-white p-2 rounded border">
+                                {qrCode}
+                            </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <Button
+                                variant="plain"
+                                size="sm"
+                                onClick={handleCopyCode}
+                                className="flex items-center justify-center"
+                            >
+                                <PiCopyDuotone className="h-4 w-4 mr-2" />
+                                Copy
+                            </Button>
+                            <Button
+                                variant="plain"
+                                size="sm"
+                                onClick={handleDownload}
+                                className="flex items-center justify-center"
+                            >
+                                <PiDownloadDuotone className="h-4 w-4 mr-2" />
+                                Download
+                            </Button>
+                            <Button
+                                variant="plain"
+                                size="sm"
+                                onClick={handlePrint}
+                                className="flex items-center justify-center"
+                            >
+                                <PiPrinterDuotone className="h-4 w-4 mr-2" />
+                                Print
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-gray-50 px-6 py-4 rounded-b-lg">
+                    <div className="flex justify-between items-center">
+                        <p className="text-xs text-gray-500">
+                            Generated by CylinderX System
+                        </p>
+                        <Button
+                            variant="solid"
+                            size="sm"
+                            onClick={onClose}
+                        >
+                            Close
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }
 
-// Helper function to get cylinder status color
-const getCylinderStatusClass = (status: string) => {
-  switch (status) {
-    case 'available':
-      return 'bg-emerald-500 text-white'
-    case 'leased':
-      return 'bg-blue-500 text-white'
-    case 'refilling':
-      return 'bg-yellow-500 text-white'
-    case 'maintenance':
-      return 'bg-orange-500 text-white'
-    case 'damaged':
-      return 'bg-red-500 text-white'
-    case 'retired':
-      return 'bg-gray-500 text-white'
-    default:
-      return 'bg-gray-500 text-white'
-  }
+// Legacy QRCodeModal component for backward compatibility
+export default function LegacyQRCodeModal({
+    isOpen,
+    onClose,
+    cylinder,
+    qrCodeData,
+    isLoading,
+}: LegacyQRCodeModalProps) {
+    if (!isOpen) return null
+
+    // Show loading state while fetching QR code
+    if (isLoading) {
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg shadow-xl p-8">
+                    <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <p className="text-gray-600">Loading QR Code...</p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <QRCodeModal
+            qrCode={cylinder?.qrCode || 'No QR Code'}
+            cylinderCode={cylinder?.cylinderCode || cylinder?.code || `CYL-${cylinder?.id}`}
+            dataURL={qrCodeData?.dataURL || null}
+            onClose={onClose}
+        />
+    )
 }

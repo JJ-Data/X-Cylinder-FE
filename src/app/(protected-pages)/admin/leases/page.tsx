@@ -79,6 +79,7 @@ const getStatusColor = (status: string) => {
 
 const getLeaseStatus = (lease: LeaseRecord): string => {
     if (lease.leaseStatus === 'returned') return 'returned'
+    // Only check for overdue if there's an expected return date
     if (lease.leaseStatus === 'active' && lease.expectedReturnDate) {
         const isOverdue = isAfter(
             new Date(),
@@ -86,7 +87,8 @@ const getLeaseStatus = (lease: LeaseRecord): string => {
         )
         return isOverdue ? 'overdue' : 'active'
     }
-    return lease.leaseStatus
+    // If no expected return date, just show as active
+    return lease.leaseStatus || 'active'
 }
 
 export default function LeasesPage() {
@@ -149,10 +151,9 @@ export default function LeasesPage() {
                         <span
                             className={`font-medium ${status === 'overdue' ? 'text-red-600' : ''}`}
                         >
-                            {format(
-                                new Date(lease.expectedReturnDate),
-                                'MMM dd, yyyy',
-                            )}
+                            {lease.expectedReturnDate 
+                                ? format(new Date(lease.expectedReturnDate), 'MMM dd, yyyy')
+                                : 'Not specified'}
                         </span>
                     </div>
                     <div className="flex justify-between">
@@ -348,12 +349,18 @@ export default function LeasesPage() {
                                 Returned:{' '}
                                 {format(new Date(actualDate), 'MMM dd, yyyy')}
                             </div>
-                            <div className="text-xs text-gray-500">
-                                Expected:{' '}
-                                {format(new Date(expectedDate), 'MMM dd, yyyy')}
-                            </div>
+                            {expectedDate && (
+                                <div className="text-xs text-gray-500">
+                                    Expected:{' '}
+                                    {format(new Date(expectedDate), 'MMM dd, yyyy')}
+                                </div>
+                            )}
                         </div>
                     )
+                }
+
+                if (!expectedDate) {
+                    return <span className="text-gray-400">Not specified</span>
                 }
 
                 return (
@@ -756,12 +763,12 @@ export default function LeasesPage() {
                         columns={columns}
                         data={leases}
                         loading={isLoading}
-                        onPaginationChange={(pageIndex) =>
-                            handlePageChange(pageIndex + 1)
+                        onPaginationChange={(page) =>
+                            handlePageChange(page)
                         }
                         pagingData={{
                             total: leasesData?.meta?.total || 0,
-                            pageIndex: filters.page! - 1,
+                            pageIndex: filters.page!,  // Pass 1-based directly - DataTable uses 1-based
                             pageSize: filters.limit || 20,
                         }}
                     />

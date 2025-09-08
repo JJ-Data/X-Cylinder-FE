@@ -755,12 +755,12 @@ export default function UsersPage() {
                         columns={columns}
                         data={users}
                         loading={isLoading}
-                        onPaginationChange={(pageIndex) =>
-                            handlePageChange(pageIndex + 1)
+                        onPaginationChange={(page) =>
+                            handlePageChange(page)
                         }
                         pagingData={{
                             total: totalUsers,
-                            pageIndex: filters.page! - 1,
+                            pageIndex: filters.page!,  // Pass 1-based directly - DataTable uses 1-based
                             pageSize: filters.pageSize || 10,
                         }}
                     />

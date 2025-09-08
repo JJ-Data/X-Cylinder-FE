@@ -73,13 +73,19 @@ export const useOutletRefillStatistics = (
 // Mutations
 export const useRefillMutations = () => {
   const createRefill = useCallback(async (data: any) => {
-    const result = await refillService.createRefill(data)
-    // Revalidate refills list and statistics
-    mutate((key: any) => Array.isArray(key) && key[0] === 'refills')
-    mutate((key: any) => Array.isArray(key) && key[0] === 'operator-refill-statistics')
-    mutate((key: any) => Array.isArray(key) && key[0] === 'outlet-refill-statistics')
-    mutate(['cylinder-refill-history', data.cylinderId])
-    return result
+    try {
+      const result = await refillService.createRefill(data)
+      // Revalidate refills list and statistics
+      mutate((key: any) => Array.isArray(key) && key[0] === 'refills')
+      mutate((key: any) => Array.isArray(key) && key[0] === 'operator-refill-statistics')
+      mutate((key: any) => Array.isArray(key) && key[0] === 'outlet-refill-statistics')
+      mutate(['cylinder-refill-history', data.cylinderId])
+      return result
+    } catch (error) {
+      // Ensure the error is properly propagated with all its properties
+      console.error('Error in createRefill hook:', error)
+      throw error // Re-throw to let the form handle it
+    }
   }, [])
 
   const createBulkRefills = useCallback(async (data: any) => {

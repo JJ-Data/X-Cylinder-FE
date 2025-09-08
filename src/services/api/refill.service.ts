@@ -31,6 +31,8 @@ export interface RefillRecord {
     preRefillVolume: string
     postRefillVolume: string
     refillCost: string
+    paymentMethod?: 'cash' | 'pos' | 'bank_transfer'
+    paymentReference?: string
     notes?: string
     batchNumber: string
     createdAt: string
@@ -59,6 +61,8 @@ export interface CreateRefillDto {
     preRefillVolume: number
     postRefillVolume: number
     refillCost?: number
+    paymentMethod?: 'cash' | 'pos' | 'bank_transfer'
+    paymentReference?: string
     notes?: string
     batchNumber?: string
 }
