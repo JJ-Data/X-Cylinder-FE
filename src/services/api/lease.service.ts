@@ -158,6 +158,51 @@ class LeaseService {
     const response = await apiClient.get(`${this.baseURL}/customer/${customerId}/eligibility`)
     return response.data.data
   }
+
+  // Get pricing quote for a lease
+  async getPricingQuote(cylinderType: string, customerTier?: string): Promise<{
+    // Amounts
+    subtotal: number
+    taxAmount: number
+    taxRate: number
+    taxType: 'inclusive' | 'exclusive'
+    leaseAmount: number
+    depositAmount: number
+    totalAmount: number
+    
+    // Metadata
+    cylinderType: string
+    customerTier: string
+    pricingModel: string
+    
+    // Detailed breakdown
+    breakdown: {
+      lease: {
+        subtotal: number
+        taxAmount: number
+        taxRate: number
+        taxType: 'inclusive' | 'exclusive'
+        total: number
+      }
+      deposit: { amount: number }
+      summary: {
+        leaseSubtotal: number
+        tax: number
+        leaseTotal: number
+        deposit: number
+        grandTotal: number
+      }
+    }
+  }> {
+    const params = new URLSearchParams()
+    params.append('cylinderType', cylinderType)
+    if (customerTier) {
+      params.append('customerTier', customerTier)
+    }
+    
+    const response = await apiClient.get(`${this.baseURL}/quote?${params.toString()}`)
+    return response.data.data
+  }
 }
 
 export const leaseService = new LeaseService()

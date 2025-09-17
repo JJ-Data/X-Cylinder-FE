@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import TableExportButton from '@/components/shared/TableExportButton'
+import { columnSets, generateFilename } from '@/utils/export.utils'
 import { useRouter } from 'next/navigation'
 import {
     PiPlusDuotone,
     PiEyeDuotone,
     PiArrowLeftDuotone,
-    PiDownloadDuotone,
     PiMagnifyingGlassDuotone,
     PiCalendarDuotone,
     PiCurrencyCircleDollarDuotone,
@@ -252,8 +253,8 @@ export default function LeasesPage() {
     }
 
     const handleExport = () => {
-        // TODO: Implement export functionality
-        console.log('Export leases')
+        // Export is handled by TableExportButton component
+        console.log('Exporting leases...')
     }
 
     const columns: ColumnDef<LeaseRecord>[] = [
@@ -742,14 +743,15 @@ export default function LeasesPage() {
                                         Clear All
                                     </Button>
                                 )}
-                                <Button
-                                    variant="plain"
-                                    icon={<PiDownloadDuotone />}
-                                    onClick={handleExport}
+                                <TableExportButton
+                                    data={leases || []}
+                                    columns={columnSets.leases}
+                                    filename={generateFilename('leases', 'csv')}
+                                    title="Lease Management Report"
+                                    buttonText="Export"
                                     className="w-full md:w-auto"
-                                >
-                                    Export
-                                </Button>
+                                    disabled={isLoading || !leases?.length}
+                                />
                             </div>
                         </div>
                     </div>

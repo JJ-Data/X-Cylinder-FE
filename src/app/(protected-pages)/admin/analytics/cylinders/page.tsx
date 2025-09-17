@@ -384,7 +384,18 @@ export default function CylinderAnalyticsPage() {
             },
             legend: {
               position: 'top',
-              horizontalAlign: 'right'
+              horizontalAlign: 'right',
+              floating: false,
+              offsetY: -10,
+              width: undefined,
+              markers: {
+                size: 12,
+                offsetX: -5
+              },
+              itemMargin: {
+                horizontal: 20,
+                vertical: 5
+              }
             }
           }}
         />
@@ -413,7 +424,18 @@ export default function CylinderAnalyticsPage() {
             },
             legend: {
               position: 'top',
-              horizontalAlign: 'right'
+              horizontalAlign: 'right',
+              floating: false,
+              offsetY: -10,
+              width: undefined,
+              markers: {
+                size: 12,
+                offsetX: -5
+              },
+              itemMargin: {
+                horizontal: 20,
+                vertical: 5
+              }
             }
           }}
         />

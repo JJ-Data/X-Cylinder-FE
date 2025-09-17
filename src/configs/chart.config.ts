@@ -22,7 +22,17 @@ export const apexLineChartDefaultOption: ApexOptions = {
     legend: {
         itemMargin: {
             vertical: 10,
+            horizontal: 20,
         },
+        offsetY: 0,
+        offsetX: 0,
+        width: undefined,
+        markers: {
+            size: 12,
+            offsetX: -5,
+            offsetY: 0
+        },
+        formatter: undefined,
         tooltipHoverFormatter: function (val, opts) {
             return (
                 val +
@@ -80,7 +90,17 @@ export const apexBarChartDefaultOption: ApexOptions = {
     legend: {
         itemMargin: {
             vertical: 10,
+            horizontal: 20,
         },
+        offsetY: 0,
+        offsetX: 0,
+        width: undefined,
+        markers: {
+            size: 12,
+            offsetX: -5,
+            offsetY: 0
+        },
+        formatter: undefined,
         tooltipHoverFormatter: function (val, opts) {
             return (
                 val +

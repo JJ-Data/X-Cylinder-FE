@@ -242,6 +242,34 @@ class RefillService {
         })
         return response.data.data
     }
+
+    // Get pricing quote for refill
+    async getRefillQuote(cylinderType?: string, gasAmount?: number): Promise<{
+        subtotal: number
+        taxAmount: number
+        taxRate: number
+        taxType: 'inclusive' | 'exclusive'
+        totalPrice: number
+        gasAmount: number
+        pricePerKg: number
+        cylinderType: string
+        breakdown: {
+            pricePerKg: number
+            gasAmount: number
+            subtotal: number
+            taxAmount: number
+            taxRate: number
+            taxType: 'inclusive' | 'exclusive'
+            total: number
+        }
+    }> {
+        const params = new URLSearchParams()
+        if (cylinderType) params.append('cylinderType', cylinderType)
+        if (gasAmount) params.append('gasAmount', String(gasAmount))
+        
+        const response = await apiClient.get(`${this.baseURL}/quote?${params.toString()}`)
+        return response.data.data
+    }
 }
 
 export const refillService = new RefillService()

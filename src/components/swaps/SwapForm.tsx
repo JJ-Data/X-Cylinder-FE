@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import type { CreateSwapDto } from '@/types/swap'
+import { settingsService } from '@/services/api/settings.service'
 
 const swapSchema = z.object({
   leaseId: z.number().optional(),
@@ -47,6 +48,14 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [foundLease, setFoundLease] = useState<any>(null)
   const [searchInput, setSearchInput] = useState('')
+  const [swapFeeSettings, setSwapFeeSettings] = useState({
+    good: 0,
+    poor: 10,
+    damaged: 25
+  })
+  const [refillPricePerKg, setRefillPricePerKg] = useState(10)
+  const [loadingSettings, setLoadingSettings] = useState(true)
+  const [selectedNewCylinder, setSelectedNewCylinder] = useState<any>(null)
   
   // API hooks
   const { findCylinder, isSearching: isSearchingCylinder } = useFindCylinder()
@@ -73,6 +82,49 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
   })
   
   const watchedValues = watch()
+  
+  // Fetch swap fee settings on mount
+  useEffect(() => {
+    const fetchSwapSettings = async () => {
+      try {
+        setLoadingSettings(true)
+        const response = await settingsService.getAllSettings()
+        
+        if (response?.data?.settings) {
+          const settings = response.data.settings
+          
+          // Extract swap fee percentages from settings
+          const goodFee = settings.find((s: any) => 
+            s.settingKey === 'swap.fee.good' || s.key === 'swap.fee.good'
+          )
+          const poorFee = settings.find((s: any) => 
+            s.settingKey === 'swap.fee.poor' || s.key === 'swap.fee.poor'
+          )
+          const damagedFee = settings.find((s: any) => 
+            s.settingKey === 'swap.fee.damaged' || s.key === 'swap.fee.damaged'
+          )
+          const refillPrice = settings.find((s: any) => 
+            s.settingKey === 'refill.price_per_kg' || s.key === 'refill.price_per_kg'
+          )
+          
+          setSwapFeeSettings({
+            good: parseFloat(goodFee?.settingValue || goodFee?.value || '0') || 0,
+            poor: parseFloat(poorFee?.settingValue || poorFee?.value || '10') || 10,
+            damaged: parseFloat(damagedFee?.settingValue || damagedFee?.value || '25') || 25
+          })
+          
+          setRefillPricePerKg(parseFloat(refillPrice?.settingValue || refillPrice?.value || '10') || 10)
+        }
+      } catch (error) {
+        console.error('Failed to fetch swap settings:', error)
+        // Use default values on error
+      } finally {
+        setLoadingSettings(false)
+      }
+    }
+    
+    fetchSwapSettings()
+  }, [])
   
   // Initialize with preselected values
   useEffect(() => {
@@ -128,23 +180,46 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
     setScanDialogOpen(true)
   }
   
-  // Calculate swap fee based on condition
+  // Calculate deposit amount based on cylinder type
+  const getDepositAmount = () => {
+    if (!foundLease?.cylinder?.type) return 0
+    const cylinderSize = parseInt(foundLease.cylinder.type.replace(/[^\d]/g, '')) || 12
+    // Assuming 500 per kg deposit (should ideally fetch from settings)
+    return cylinderSize * 500
+  }
+  
+  // Calculate swap fee based on condition (percentage of deposit)
   const calculateSwapFee = () => {
     if (!foundLease) return 0
     
-    const baseFee = 0
-    let conditionFee = 0
+    const depositAmount = getDepositAmount()
+    let feePercentage = 0
     
     if (watchedValues.condition === 'poor') {
-      conditionFee = 500 // ₦500 for poor condition
+      feePercentage = swapFeeSettings.poor
     } else if (watchedValues.condition === 'damaged') {
-      conditionFee = 1500 // ₦1500 for damaged condition
+      feePercentage = swapFeeSettings.damaged
+    } else {
+      feePercentage = swapFeeSettings.good
     }
     
-    return baseFee + conditionFee
+    return (depositAmount * feePercentage) / 100
+  }
+  
+  // Calculate gas refill cost
+  const calculateRefillCost = () => {
+    if (!foundLease || !selectedNewCylinder) return 0
+    
+    const oldGasVolume = watchedValues.weightRecorded || foundLease.cylinder?.currentGasVolume || 0
+    const newGasVolume = selectedNewCylinder?.maxGasVolume || selectedNewCylinder?.currentGasVolume || 0
+    const gasVolumeDifference = Math.max(0, newGasVolume - oldGasVolume)
+    
+    return gasVolumeDifference * refillPricePerKg
   }
   
   const swapFee = calculateSwapFee()
+  const refillCost = calculateRefillCost()
+  const totalCost = swapFee + refillCost
   
   // Update swap fee when condition changes
   useEffect(() => {
@@ -162,6 +237,16 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
     cylinder
   })) || []
   
+  // Track selected new cylinder
+  useEffect(() => {
+    if (watchedValues.newCylinderId && availableCylinders) {
+      const cylinder = availableCylinders.find((c: any) => c.id === watchedValues.newCylinderId)
+      setSelectedNewCylinder(cylinder)
+    } else {
+      setSelectedNewCylinder(null)
+    }
+  }, [watchedValues.newCylinderId, availableCylinders])
+  
   const onSubmit = async (data: SwapFormData) => {
     if (!foundLease) {
       toast.error('Please find a cylinder to swap first')
@@ -175,8 +260,8 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
         condition: data.condition,
         weightRecorded: data.weightRecorded,
         damageNotes: data.damageNotes,
-        swapFee: data.swapFee,
-        reasonForFee: data.reasonForFee,
+        swapFee: swapFee, // Pass calculated swap fee (condition-based)
+        reasonForFee: `Condition: ${data.condition} (${data.condition === 'good' ? swapFeeSettings.good : data.condition === 'poor' ? swapFeeSettings.poor : swapFeeSettings.damaged}% fee)`,
         notes: data.notes
       }
       
@@ -259,6 +344,15 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
             <Card className="mt-6">
               <h4 className="mb-4">Cylinder Assessment</h4>
               
+              {loadingSettings && (
+                <Alert type="info" className="mb-4">
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                    Loading swap fee settings...
+                  </div>
+                </Alert>
+              )}
+              
               <div className="space-y-4">
                 <FormItem
                   label="Current Weight (kg)"
@@ -302,10 +396,24 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
                               : 'border-gray-300 hover:border-gray-400'
                             }
                           `}
+                          disabled={loadingSettings}
                         >
                           <PiCheckCircleDuotone className="text-2xl mx-auto mb-2" />
                           <div className="font-medium">Good</div>
-                          <div className="text-xs mt-1">No extra fee</div>
+                          <div className="text-xs mt-1">
+                            {loadingSettings ? (
+                              <span className="animate-pulse">Loading...</span>
+                            ) : swapFeeSettings.good === 0 ? (
+                              'No penalty'
+                            ) : (
+                              `${swapFeeSettings.good}% fee`
+                            )}
+                          </div>
+                          {!loadingSettings && getDepositAmount() > 0 && swapFeeSettings.good > 0 && (
+                            <div className="text-xs font-semibold mt-1">
+                              ₦{((getDepositAmount() * swapFeeSettings.good) / 100).toLocaleString()}
+                            </div>
+                          )}
                         </button>
                         
                         <button
@@ -318,10 +426,22 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
                               : 'border-gray-300 hover:border-gray-400'
                             }
                           `}
+                          disabled={loadingSettings}
                         >
                           <PiWarningCircleDuotone className="text-2xl mx-auto mb-2" />
                           <div className="font-medium">Poor</div>
-                          <div className="text-xs mt-1">₦500 fee</div>
+                          <div className="text-xs mt-1">
+                            {loadingSettings ? (
+                              <span className="animate-pulse">Loading...</span>
+                            ) : (
+                              `${swapFeeSettings.poor}% fee`
+                            )}
+                          </div>
+                          {!loadingSettings && getDepositAmount() > 0 && (
+                            <div className="text-xs font-semibold mt-1">
+                              ₦{((getDepositAmount() * swapFeeSettings.poor) / 100).toLocaleString()}
+                            </div>
+                          )}
                         </button>
                         
                         <button
@@ -334,10 +454,22 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
                               : 'border-gray-300 hover:border-gray-400'
                             }
                           `}
+                          disabled={loadingSettings}
                         >
                           <PiXCircleDuotone className="text-2xl mx-auto mb-2" />
                           <div className="font-medium">Damaged</div>
-                          <div className="text-xs mt-1">₦1,500 fee</div>
+                          <div className="text-xs mt-1">
+                            {loadingSettings ? (
+                              <span className="animate-pulse">Loading...</span>
+                            ) : (
+                              `${swapFeeSettings.damaged}% fee`
+                            )}
+                          </div>
+                          {!loadingSettings && getDepositAmount() > 0 && (
+                            <div className="text-xs font-semibold mt-1">
+                              ₦{((getDepositAmount() * swapFeeSettings.damaged) / 100).toLocaleString()}
+                            </div>
+                          )}
                         </button>
                       </div>
                     )}
@@ -426,18 +558,50 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
                   <span className="font-medium capitalize">{watchedValues.condition}</span>
                 </div>
                 
+                {selectedNewCylinder && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Current Gas Volume</span>
+                      <span className="font-medium">
+                        {(watchedValues.weightRecorded || foundLease?.cylinder?.currentGasVolume || 0).toFixed(2)} kg
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">New Cylinder Gas Volume</span>
+                      <span className="font-medium">
+                        {(selectedNewCylinder?.maxGasVolume || 0).toFixed(2)} kg
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Gas Volume Difference</span>
+                      <span className="font-medium">
+                        {Math.max(0, (selectedNewCylinder?.maxGasVolume || 0) - (watchedValues.weightRecorded || foundLease?.cylinder?.currentGasVolume || 0)).toFixed(2)} kg
+                      </span>
+                    </div>
+                  </>
+                )}
+                
                 {swapFee > 0 && (
                   <div className="flex justify-between text-amber-600">
-                    <span>Condition Fee</span>
+                    <span>Condition Fee ({watchedValues.condition === 'good' ? swapFeeSettings.good : watchedValues.condition === 'poor' ? swapFeeSettings.poor : swapFeeSettings.damaged}%)</span>
                     <span className="font-medium">₦{swapFee.toLocaleString()}</span>
+                  </div>
+                )}
+                
+                {refillCost > 0 && (
+                  <div className="flex justify-between text-blue-600">
+                    <span>Gas Refill Cost (₦{refillPricePerKg}/kg)</span>
+                    <span className="font-medium">₦{refillCost.toLocaleString()}</span>
                   </div>
                 )}
                 
                 <div className="pt-3 mt-3 border-t border-gray-300">
                   <div className="flex justify-between text-lg">
-                    <span className="font-semibold">Total Fee</span>
+                    <span className="font-semibold">Total Cost</span>
                     <span className="font-bold text-blue-600">
-                      ₦{swapFee.toLocaleString()}
+                      ₦{totalCost.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -445,7 +609,12 @@ export function SwapForm({ preselectedLeaseId, preselectedCylinderCode }: SwapFo
                 <Alert showIcon type="info" className="mt-4">
                   <p className="text-sm">
                     Processing swap will replace the current cylinder with a new one 
-                    and update the lease record.
+                    and update the lease record. 
+                    {refillCost > 0 && (
+                      <span>
+                        You will be charged for the gas difference at ₦{refillPricePerKg}/kg.
+                      </span>
+                    )}
                   </p>
                 </Alert>
               </div>

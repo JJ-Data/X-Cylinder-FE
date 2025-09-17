@@ -11,7 +11,6 @@ import {
     PiTrendUpDuotone,
     PiMagnifyingGlassDuotone,
     PiFunnelDuotone,
-    PiDownloadDuotone,
 } from 'react-icons/pi'
 import Container from '@/components/shared/Container'
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -24,6 +23,8 @@ import OutletListContent from './_components/OutletListContent'
 import { useOutletStore } from '@/stores/useOutletStore'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
 import { Suspense } from 'react'
+import TableExportButton from '@/components/shared/TableExportButton'
+import { columnSets, generateFilename } from '@/utils/export.utils'
 
 const OutletsPage = () => {
     const router = useRouter()
@@ -67,8 +68,8 @@ const OutletsPage = () => {
     }
 
     const handleExport = () => {
-        // TODO: Implement export functionality
-        console.log('Export outlets')
+        // Export is handled by TableExportButton component
+        console.log('Exporting outlets...')
     }
 
     const statusOptions = [
@@ -343,14 +344,15 @@ const OutletsPage = () => {
                                         Clear All
                                     </Button>
                                 )}
-                                <Button
-                                    variant="plain"
-                                    icon={<PiDownloadDuotone />}
-                                    onClick={handleExport}
+                                <TableExportButton
+                                    data={outlets || []}
+                                    columns={columnSets.outlets}
+                                    filename={generateFilename('outlets', 'csv')}
+                                    title="Outlet Management Report"
+                                    buttonText="Export"
                                     className="w-full md:w-auto"
-                                >
-                                    Export
-                                </Button>
+                                    disabled={isLoading || !outlets?.length}
+                                />
                             </div>
                         </div>
                     </div>

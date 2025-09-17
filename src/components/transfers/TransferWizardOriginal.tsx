@@ -171,7 +171,7 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
         trigger,
     } = useForm<TransferFormData>({
         defaultValues: {
-            transferType: preselectedCylinderId ? 'single' : 'bulk',
+            transferType: 'single',
             cylinderCode: '',
             cylinderIds: [],
             sourceOutletId: undefined,
@@ -1306,6 +1306,23 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
                                     handleStepChange(currentStep + 1)
                                 }
                                 icon={<PiArrowRightDuotone />}
+                                disabled={
+                                    isProcessing ||
+                                    // Step 0: Transfer type selection - always enabled since we have a default
+                                    (currentStep === 0 ? false :
+                                    // Step 1: Cylinder selection
+                                    currentStep === 1 ? (
+                                        watchedTransferType === 'single' 
+                                            ? !selectedCylinder
+                                            : !watchedSourceOutlet || selectedCylinders.length === 0
+                                    ) :
+                                    // Step 2: Destination & Reason
+                                    currentStep === 2 ? (
+                                        !watchedDestinationOutlet ||
+                                        !watchedReason ||
+                                        (watchedReason === 'other' && !watch('customReason'))
+                                    ) : false)
+                                }
                             >
                                 Next
                             </Button>

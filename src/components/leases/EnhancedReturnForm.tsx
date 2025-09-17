@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,11 +18,12 @@ import { useSession } from 'next-auth/react'
 import { toast } from 'react-hot-toast'
 import { format } from 'date-fns'
 import type { ReturnLeaseDto } from '@/services/api/lease.service'
+import { settingsService } from '@/services/api/settings.service'
 
 const returnSchema = z.object({
   returnDate: z.string().optional(),
   notes: z.string().optional(),
-  condition: z.enum(['good', 'damaged', 'needs_maintenance'])
+  condition: z.enum(['good', 'poor', 'damaged'])
 })
 
 type ReturnFormData = z.infer<typeof returnSchema>
@@ -37,6 +38,12 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [selectedLeaseId, setSelectedLeaseId] = useState<number | undefined>(preselectedLeaseId)
   const [searchTerm, setSearchTerm] = useState('')
+  const [penaltySettings, setPenaltySettings] = useState({
+    good: 0,
+    poor: 10,
+    damaged: 25
+  })
+  const [loadingSettings, setLoadingSettings] = useState(true)
   
   // API hooks - use leaseStatus instead of status to match backend
   const { data: leasesData, isLoading: loadingLeases } = useLeases({
@@ -65,6 +72,44 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
   
   const watchedValues = watch()
   
+  // Fetch penalty settings on mount
+  useEffect(() => {
+    const fetchPenaltySettings = async () => {
+      try {
+        setLoadingSettings(true)
+        const response = await settingsService.getAllSettings()
+        
+        if (response?.data?.settings) {
+          const settings = response.data.settings
+          
+          // Extract penalty percentages from settings
+          const goodPenalty = settings.find((s: any) => 
+            s.settingKey === 'return.penalty.good' || s.key === 'return.penalty.good'
+          )
+          const poorPenalty = settings.find((s: any) => 
+            s.settingKey === 'return.penalty.poor' || s.key === 'return.penalty.poor'
+          )
+          const damagedPenalty = settings.find((s: any) => 
+            s.settingKey === 'return.penalty.damaged' || s.key === 'return.penalty.damaged'
+          )
+          
+          setPenaltySettings({
+            good: parseFloat(goodPenalty?.settingValue || goodPenalty?.value || '0') || 0,
+            poor: parseFloat(poorPenalty?.settingValue || poorPenalty?.value || '10') || 10,
+            damaged: parseFloat(damagedPenalty?.settingValue || damagedPenalty?.value || '25') || 25
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch penalty settings:', error)
+        // Use default values on error
+      } finally {
+        setLoadingSettings(false)
+      }
+    }
+    
+    fetchPenaltySettings()
+  }, [])
+  
   const handleCylinderScanned = (cylinder: any) => {
     if (leasesData?.data) {
       const lease = leasesData.data.find(l => l.cylinderId === cylinder.id)
@@ -87,7 +132,7 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
       const returnData: ReturnLeaseDto = {
         returnDate: data.returnDate,
         notes: data.notes,
-        condition: data.condition
+        condition: data.condition === 'poor' ? 'needs_maintenance' : data.condition as 'good' | 'damaged'
       }
       
       await returnLease.trigger({
@@ -113,23 +158,29 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
   
   // Calculate refund details
   const calculateRefund = () => {
-    if (!selectedLease) return { deposit: 0, deductions: 0, refund: 0 }
+    if (!selectedLease) return { deposit: 0, deductions: 0, refund: 0, penaltyPercent: 0 }
     
     // Parse string amount to number
     const deposit = parseFloat(selectedLease.depositAmount) || 0
     let deductions = 0
+    let penaltyPercent = 0
     
-    // Apply deductions based on condition
-    if (watchedValues.condition === 'damaged') {
-      deductions = deposit * 0.5 // 50% deduction for damage
-    } else if (watchedValues.condition === 'needs_maintenance') {
-      deductions = deposit * 0.2 // 20% deduction for maintenance
+    // Apply deductions based on condition using actual settings
+    if (watchedValues.condition === 'good') {
+      penaltyPercent = penaltySettings.good
+    } else if (watchedValues.condition === 'poor') {
+      penaltyPercent = penaltySettings.poor
+    } else if (watchedValues.condition === 'damaged') {
+      penaltyPercent = penaltySettings.damaged
     }
+    
+    deductions = (deposit * penaltyPercent) / 100
     
     return {
       deposit,
       deductions,
-      refund: Math.max(0, deposit - deductions)
+      refund: Math.max(0, deposit - deductions),
+      penaltyPercent
     }
   }
   
@@ -193,6 +244,15 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
             <Card className="mt-6">
               <h4 className="mb-4">Return Assessment</h4>
               
+              {loadingSettings && (
+                <Alert type="info" className="mb-4">
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                    Loading penalty settings...
+                  </div>
+                </Alert>
+              )}
+              
               <div className="space-y-4">
                 <FormItem
                   label="Return Date"
@@ -221,57 +281,98 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
                   <Controller
                     name="condition"
                     control={control}
-                    render={({ field }) => (
-                      <div className="grid grid-cols-3 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => field.onChange('good')}
-                          className={`
-                            p-4 rounded-lg border-2 text-center transition-all
-                            ${field.value === 'good'
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-300 hover:border-gray-400'
-                            }
-                          `}
-                        >
-                          <HiCheck className="h-6 w-6 mx-auto mb-2" />
-                          <div className="font-medium">Good</div>
-                          <div className="text-xs mt-1">No deductions</div>
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={() => field.onChange('damaged')}
-                          className={`
-                            p-4 rounded-lg border-2 text-center transition-all
-                            ${field.value === 'damaged'
-                              ? 'border-red-500 bg-red-50 text-red-700'
-                              : 'border-gray-300 hover:border-gray-400'
-                            }
-                          `}
-                        >
-                          <HiX className="h-6 w-6 mx-auto mb-2" />
-                          <div className="font-medium">Damaged</div>
-                          <div className="text-xs mt-1">50% deduction</div>
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={() => field.onChange('needs_maintenance')}
-                          className={`
-                            p-4 rounded-lg border-2 text-center transition-all
-                            ${field.value === 'needs_maintenance'
-                              ? 'border-amber-500 bg-amber-50 text-amber-700'
-                              : 'border-gray-300 hover:border-gray-400'
-                            }
-                          `}
-                        >
-                          <HiExclamation className="h-6 w-6 mx-auto mb-2" />
-                          <div className="font-medium">Needs Maintenance</div>
-                          <div className="text-xs mt-1">20% deduction</div>
-                        </button>
-                      </div>
-                    )}
+                    render={({ field }) => {
+                      const deposit = parseFloat(selectedLease?.depositAmount || '0')
+                      return (
+                        <div className="grid grid-cols-3 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => field.onChange('good')}
+                            className={`
+                              p-4 rounded-lg border-2 text-center transition-all relative
+                              ${field.value === 'good'
+                                ? 'border-green-500 bg-green-50 text-green-700'
+                                : 'border-gray-300 hover:border-gray-400'
+                              }
+                            `}
+                            disabled={loadingSettings}
+                          >
+                            <HiCheck className="h-6 w-6 mx-auto mb-2" />
+                            <div className="font-medium">Good</div>
+                            <div className="text-xs mt-1">
+                              {loadingSettings ? (
+                                <span className="animate-pulse">Loading...</span>
+                              ) : penaltySettings.good === 0 ? (
+                                'No penalty'
+                              ) : (
+                                `${penaltySettings.good}% penalty`
+                              )}
+                            </div>
+                            {!loadingSettings && deposit > 0 && penaltySettings.good > 0 && (
+                              <div className="text-xs font-semibold mt-1">
+                                -₦{((deposit * penaltySettings.good) / 100).toLocaleString()}
+                              </div>
+                            )}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => field.onChange('poor')}
+                            className={`
+                              p-4 rounded-lg border-2 text-center transition-all relative
+                              ${field.value === 'poor'
+                                ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                : 'border-gray-300 hover:border-gray-400'
+                              }
+                            `}
+                            disabled={loadingSettings}
+                          >
+                            <HiExclamation className="h-6 w-6 mx-auto mb-2" />
+                            <div className="font-medium">Poor</div>
+                            <div className="text-xs mt-1">
+                              {loadingSettings ? (
+                                <span className="animate-pulse">Loading...</span>
+                              ) : (
+                                `${penaltySettings.poor}% penalty`
+                              )}
+                            </div>
+                            {!loadingSettings && deposit > 0 && (
+                              <div className="text-xs font-semibold mt-1">
+                                -₦{((deposit * penaltySettings.poor) / 100).toLocaleString()}
+                              </div>
+                            )}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => field.onChange('damaged')}
+                            className={`
+                              p-4 rounded-lg border-2 text-center transition-all relative
+                              ${field.value === 'damaged'
+                                ? 'border-red-500 bg-red-50 text-red-700'
+                                : 'border-gray-300 hover:border-gray-400'
+                              }
+                            `}
+                            disabled={loadingSettings}
+                          >
+                            <HiX className="h-6 w-6 mx-auto mb-2" />
+                            <div className="font-medium">Damaged</div>
+                            <div className="text-xs mt-1">
+                              {loadingSettings ? (
+                                <span className="animate-pulse">Loading...</span>
+                              ) : (
+                                `${penaltySettings.damaged}% penalty`
+                              )}
+                            </div>
+                            {!loadingSettings && deposit > 0 && (
+                              <div className="text-xs font-semibold mt-1">
+                                -₦{((deposit * penaltySettings.damaged) / 100).toLocaleString()}
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      )
+                    }}
                   />
                 </FormItem>
                 
@@ -306,10 +407,24 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
                   <span className="font-medium">₦{refundDetails.deposit.toLocaleString()}</span>
                 </div>
                 
-                {refundDetails.deductions > 0 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>Condition Deduction</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Selected Condition</span>
+                  <span className="font-medium capitalize">
+                    {watchedValues.condition || 'None'}
+                  </span>
+                </div>
+                
+                {refundDetails.penaltyPercent > 0 && (
+                  <div className="flex justify-between text-orange-600">
+                    <span>Penalty ({refundDetails.penaltyPercent}%)</span>
                     <span className="font-medium">-₦{refundDetails.deductions.toLocaleString()}</span>
+                  </div>
+                )}
+                
+                {refundDetails.penaltyPercent === 0 && watchedValues.condition === 'good' && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Penalty</span>
+                    <span className="font-medium">No penalty</span>
                   </div>
                 )}
                 
@@ -324,7 +439,10 @@ export function EnhancedReturnForm({ preselectedLeaseId }: EnhancedReturnFormPro
                 
                 <Alert showIcon type="info" className="mt-4">
                   <p className="text-sm">
-                    Processing return will mark the cylinder as available and update the customer&apos;s lease history.
+                    The refund amount is calculated based on the cylinder condition. 
+                    {refundDetails.penaltyPercent > 0 
+                      ? `A ${refundDetails.penaltyPercent}% penalty applies for ${watchedValues.condition} condition.`
+                      : 'No penalty applies for good condition cylinders.'}
                   </p>
                 </Alert>
               </div>

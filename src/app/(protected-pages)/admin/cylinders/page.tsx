@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import TableExportButton from '@/components/shared/TableExportButton'
+import { columnSets, generateFilename } from '@/utils/export.utils'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     PiPlusDuotone,
-    PiDownloadDuotone,
     PiEyeDuotone,
     PiPencilDuotone,
     PiMagnifyingGlassDuotone,
@@ -245,8 +246,8 @@ export default function CylindersPage() {
     ]
 
     const handleExport = () => {
-        // TODO: Implement export functionality
-        console.log('Export cylinders')
+        // Export is handled by TableExportButton component
+        console.log('Exporting cylinders...')
     }
 
     const clearFilters = () => {
@@ -280,14 +281,15 @@ export default function CylindersPage() {
                     </div>
                     {!isMobile && (
                         <div className="flex gap-2">
-                            <Button
-                                variant="plain"
+                            <TableExportButton
+                                data={cylinders || []}
+                                columns={columnSets.cylinders}
+                                filename={generateFilename('cylinders', 'csv')}
+                                title="Cylinder Management Report"
+                                buttonText="Export"
                                 size="md"
-                                icon={<PiDownloadDuotone />}
-                                onClick={handleExport}
-                            >
-                                Export
-                            </Button>
+                                disabled={isLoading || !cylinders?.length}
+                            />
                             <Link href="/admin/cylinders/new">
                                 <Button
                                     variant="solid"

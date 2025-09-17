@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import TableExportButton from '@/components/shared/TableExportButton'
+import { columnSets, generateFilename } from '@/utils/export.utils'
 import { useTransferHistory } from '@/hooks/useTransferHistory'
 import Container from '@/components/shared/Container'
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -115,15 +117,25 @@ export default function TransferHistoryPage() {
           {showFilters ? 'Hide Filters' : 'Show Filters'}
         </Button>
         
-        <Button
-          variant="solid"
-          icon={<PiDownloadDuotone />}
-          onClick={() => handleExport('csv')}
-          loading={downloading}
-          disabled={downloading || !data?.transfers?.length}
-        >
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="solid"
+            icon={<PiDownloadDuotone />}
+            onClick={() => handleExport('csv')}
+            loading={downloading}
+            disabled={downloading || !data?.transfers?.length}
+          >
+            Export CSV (Server)
+          </Button>
+          <TableExportButton
+            data={data?.transfers || []}
+            columns={columnSets.transfers}
+            filename={generateFilename('transfers', 'csv')}
+            title="Transfer History Report"
+            buttonText="Export (Client)"
+            disabled={isLoading || !data?.transfers?.length}
+          />
+        </div>
       </div>
 
       {showFilters && (

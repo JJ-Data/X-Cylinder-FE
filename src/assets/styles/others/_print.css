@@ -1,0 +1,170 @@
+/* Lease Receipt Print Styles */
+
+@media print {
+  /* General print styles */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Container styles */
+  .receipt-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .receipt-paper {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    background: white !important;
+  }
+
+  .receipt-card {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+  }
+
+  .receipt-content {
+    padding: 20mm 15mm !important;
+  }
+
+  /* Hide non-print elements */
+  .no-print,
+  .print\:hidden,
+  [class*="print:hidden"] {
+    display: none !important;
+  }
+
+  /* Default page size - A4 */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Typography adjustments for print */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  p, div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Table and list adjustments */
+  table, ul, ol {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Keep sections together */
+  .border-t {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+
+  /* Ensure backgrounds print */
+  .bg-blue-50 {
+    background-color: #eff6ff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .bg-gray-50 {
+    background-color: #f9fafb !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure borders print */
+  .border,
+  .border-t,
+  .border-b,
+  .border-gray-200,
+  .border-blue-200 {
+    border-color: #e5e7eb !important;
+  }
+
+  /* Color preservation */
+  .text-blue-600 {
+    color: #2563eb !important;
+  }
+
+  .text-green-600 {
+    color: #16a34a !important;
+  }
+
+  .text-gray-900 {
+    color: #111827 !important;
+  }
+
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+
+  .text-gray-500 {
+    color: #6b7280 !important;
+  }
+
+  /* Font weight preservation */
+  .font-bold {
+    font-weight: 700 !important;
+  }
+
+  .font-semibold {
+    font-weight: 600 !important;
+  }
+
+  .font-medium {
+    font-weight: 500 !important;
+  }
+
+  /* Make sure content is visible */
+  .text-center,
+  .text-left,
+  .text-right {
+    text-align: inherit !important;
+  }
+
+  .flex,
+  .grid {
+    display: flex !important;
+  }
+
+  .grid {
+    display: grid !important;
+  }
+
+  /* Ensure visibility */
+  .receipt-container,
+  .receipt-paper,
+  .receipt-card,
+  .receipt-content,
+  .receipt-content * {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Screen preview styles for print layout */
+@media screen and (min-width: 768px) {
+  .receipt-paper {
+    max-width: 210mm;
+    margin: 0 auto;
+  }
+  
+  .receipt-content {
+    padding: 2rem;
+  }
+}

@@ -22,7 +22,7 @@ import { useRefillMutations } from '@/hooks/useRefills'
 import CylinderQRScanner from '@/components/cylinders/CylinderQRScanner'
 import { useSession } from 'next-auth/react'
 import { toast } from 'react-hot-toast'
-import type { CreateRefillDto } from '@/services/api/refill.service'
+import { refillService, type CreateRefillDto } from '@/services/api/refill.service'
 import { handleBackendValidationErrors } from '@/utils/errorHandler'
 import { useAuthStore } from '@/stores'
 
@@ -64,9 +64,6 @@ const refillSchema = z
 
 type RefillFormData = z.infer<typeof refillSchema>
 
-// Price per kg (configurable)
-const PRICE_PER_KG = 300
-
 // Generate batch number
 const generateBatchNumber = () => {
     const date = new Date()
@@ -87,6 +84,9 @@ export default function NewRefillPage() {
     const [scanDialogOpen, setScanDialogOpen] = useState(false)
     const [scannedCylinder, setScannedCylinder] = useState<any>(null)
     const [formError, setFormError] = useState<string | null>(null)
+    const [pricePerKg, setPricePerKg] = useState<number>(0)
+    const [loadingPrice, setLoadingPrice] = useState(false)
+    const [priceQuote, setPriceQuote] = useState<any>(null)
 
     // API hooks - use operator's outlet ID for filtering
     const { data: cylindersData, isLoading: loadingCylinders } = useCylinders({
@@ -139,13 +139,41 @@ export default function NewRefillPage() {
         }
     }, [selectedCylinder, setValue])
 
+    // Fetch price quote when volume changes
+    useEffect(() => {
+        const fetchPriceQuote = async () => {
+            const volumeDiff = postRefillVolume - preRefillVolume
+            if (volumeDiff > 0) {
+                try {
+                    setLoadingPrice(true)
+                    const quote = await refillService.getRefillQuote(
+                        selectedCylinder?.type || undefined,
+                        volumeDiff
+                    )
+                    setPriceQuote(quote)
+                    setPricePerKg(quote.pricePerKg)
+                    setValue('refillCost', quote.totalPrice)
+                } catch (error) {
+                    console.error('Failed to fetch price quote:', error)
+                    // Fallback to a default calculation if API fails
+                    const fallbackPrice = volumeDiff * 300 // Default fallback
+                    setValue('refillCost', fallbackPrice)
+                } finally {
+                    setLoadingPrice(false)
+                }
+            } else {
+                setValue('refillCost', 0)
+                setPriceQuote(null)
+                setLoadingPrice(false)
+            }
+        }
+
+        fetchPriceQuote()
+    }, [postRefillVolume, preRefillVolume, selectedCylinder?.type, setValue])
+
     // Auto-calculate cost when volume changes
     const handlePostVolumeChange = (newVolume: number) => {
         setValue('postRefillVolume', newVolume)
-        const volumeDiff = newVolume - preRefillVolume
-        if (volumeDiff > 0) {
-            setValue('refillCost', volumeDiff * PRICE_PER_KG)
-        }
     }
 
     const onSubmit = async (data: RefillFormData) => {
@@ -408,12 +436,27 @@ export default function NewRefillPage() {
 
                             {volumeAdded > 0 && (
                                 <Alert type="info" showIcon>
-                                    <p className="text-sm">
-                                        Volume to be added:{' '}
-                                        <span className="font-semibold">
-                                            {volumeAdded.toFixed(2)} kg
-                                        </span>
-                                    </p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm">
+                                            Volume to be added:{' '}
+                                            <span className="font-semibold">
+                                                {volumeAdded.toFixed(2)} kg
+                                            </span>
+                                        </p>
+                                        {pricePerKg > 0 && (
+                                            <p className="text-sm">
+                                                Price per kg:{' '}
+                                                <span className="font-semibold">
+                                                    ₦{pricePerKg.toLocaleString()}
+                                                </span>
+                                            </p>
+                                        )}
+                                        {loadingPrice && (
+                                            <p className="text-sm text-gray-500">
+                                                Loading pricing information...
+                                            </p>
+                                        )}
+                                    </div>
                                 </Alert>
                             )}
 
@@ -434,8 +477,10 @@ export default function NewRefillPage() {
                                         <Input
                                             {...field}
                                             type="number"
-                                            placeholder="Enter cost"
+                                            placeholder="Auto-calculated"
                                             prefix="₦"
+                                            readOnly
+                                            className="bg-gray-50"
                                             onChange={(e) =>
                                                 field.onChange(
                                                     Number(e.target.value),
@@ -618,7 +663,7 @@ export default function NewRefillPage() {
                                     Price per kg:
                                 </span>{' '}
                                 <span className="font-medium">
-                                    ₦{PRICE_PER_KG}
+                                    {loadingPrice ? 'Loading...' : pricePerKg > 0 ? `₦${pricePerKg.toLocaleString()}` : '₦0'}
                                 </span>
                             </div>
                             <div>

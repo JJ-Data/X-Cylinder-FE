@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PiGearDuotone,
-  PiCurrencyDollarDuotone,
+  PiCurrencyNgnDuotone,
   PiGasPumpDuotone,
   PiArrowsLeftRightDuotone,
+  PiArrowBendUpLeftDuotone,
   PiCalculatorDuotone,
   PiFloppyDiskDuotone,
   PiWarningDuotone,
@@ -15,6 +16,7 @@ import {
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
 import Tabs from '@/components/ui/Tabs'
 import Badge from '@/components/ui/Badge'
 import Alert from '@/components/ui/Alert'
@@ -28,50 +30,67 @@ import { formatCurrency } from '@/utils/format'
 interface SimpleSetting {
   id?: number
   key: string
-  value: number
+  value: number | string
   label: string
   description?: string
   unit?: string
   min?: number
   max?: number
+  options?: { value: string; label: string }[]
+  categoryId?: number
 }
 
 // Setting categories
 const settingCategories = {
   lease: {
     label: 'Lease',
-    icon: PiCurrencyDollarDuotone,
+    icon: PiCurrencyNgnDuotone,
+    categoryId: 2,
     settings: [
-      { key: 'lease.base_price.12kg', label: '12kg Daily Rate', unit: 'per day', min: 0 },
-      { key: 'lease.base_price.25kg', label: '25kg Daily Rate', unit: 'per day', min: 0 },
-      { key: 'lease.base_price.50kg', label: '50kg Daily Rate', unit: 'per day', min: 0 },
-      { key: 'lease.deposit.12kg', label: '12kg Deposit', unit: 'deposit', min: 0 },
-      { key: 'lease.deposit.25kg', label: '25kg Deposit', unit: 'deposit', min: 0 },
-      { key: 'lease.deposit.50kg', label: '50kg Deposit', unit: 'deposit', min: 0 },
+      { key: 'lease.fee_per_kg', label: 'Lease Fee per KG', unit: '₦ per kg', min: 0, categoryId: 2 },
+      { key: 'lease.deposit_per_kg', label: 'Deposit per KG', unit: '₦ per kg', min: 0, categoryId: 2 },
+    ]
+  },
+  returns: {
+    label: 'Return Penalties',
+    icon: PiArrowBendUpLeftDuotone,
+    categoryId: 2,
+    settings: [
+      { key: 'return.penalty.good', label: 'Good Condition', unit: '% of deposit', min: 0, max: 100, categoryId: 2 },
+      { key: 'return.penalty.poor', label: 'Poor Condition', unit: '% of deposit', min: 0, max: 100, categoryId: 2 },
+      { key: 'return.penalty.damaged', label: 'Damaged Condition', unit: '% of deposit', min: 0, max: 100, categoryId: 2 },
     ]
   },
   refill: {
     label: 'Refill',
     icon: PiGasPumpDuotone,
+    categoryId: 3,
     settings: [
-      { key: 'refill.price_per_kg', label: 'Price per KG', unit: 'per kg', min: 0 },
-      { key: 'refill.minimum_charge', label: 'Minimum Charge', unit: 'minimum', min: 0 },
+      { key: 'refill.price_per_kg', label: 'Price per KG', unit: 'per kg', min: 0, categoryId: 3 },
+      { key: 'refill.minimum_charge', label: 'Minimum Charge', unit: 'minimum', min: 0, categoryId: 3 },
     ]
   },
   swap: {
     label: 'Swap',
     icon: PiArrowsLeftRightDuotone,
+    categoryId: 4,
     settings: [
-      { key: 'swap.fee.standard', label: 'Standard Swap Fee', unit: 'fee', min: 0 },
-      { key: 'swap.fee.damaged', label: 'Damaged Cylinder Fee', unit: 'fee', min: 0 },
+      { key: 'swap.fee.good', label: 'Good Condition', unit: '% fee', min: 0, max: 100, categoryId: 4 },
+      { key: 'swap.fee.poor', label: 'Poor Condition', unit: '% fee', min: 0, max: 100, categoryId: 4 },
+      { key: 'swap.fee.damaged', label: 'Damaged Condition', unit: '% fee', min: 0, max: 100, categoryId: 4 },
     ]
   },
   general: {
     label: 'General',
     icon: PiCalculatorDuotone,
+    categoryId: 10,
     settings: [
-      { key: 'tax.rate', label: 'Tax Rate', unit: '%', min: 0, max: 100 },
-      { key: 'late.fee.daily', label: 'Daily Late Fee', unit: 'per day', min: 0 },
+      { key: 'tax.rate', label: 'Tax Rate', unit: '%', min: 0, max: 100, categoryId: 10 },
+      { key: 'tax.type', label: 'Tax Type', unit: '', categoryId: 10, options: [
+        { value: 'exclusive', label: 'Exclusive (added on top)' },
+        { value: 'inclusive', label: 'Inclusive (included in price)' }
+      ]},
+      { key: 'late.fee.daily', label: 'Daily Late Fee', unit: 'per day', min: 0, categoryId: 10 },
     ]
   }
 }
@@ -108,9 +127,15 @@ export default function SimplifiedSettingsPage() {
       // Initialize with default values
       Object.values(settingCategories).forEach(category => {
         category.settings.forEach(setting => {
+          // Use appropriate default value based on setting type
+          const defaultValue = 'options' in setting && setting.options
+            ? (setting.options[0]?.value || 'exclusive') // Default for dropdown
+            : 0 // Default for numeric
+            
           settingsMap[setting.key] = {
             ...setting,
-            value: 0
+            value: defaultValue,
+            categoryId: setting.categoryId
           }
         })
       })
@@ -118,11 +143,31 @@ export default function SimplifiedSettingsPage() {
       // Update with actual values from API
       if (response?.data?.settings) {
         response.data.settings.forEach((setting: any) => {
-          if (settingsMap[setting.settingKey]) {
-            settingsMap[setting.settingKey] = {
-              ...settingsMap[setting.settingKey],
+          // Check both possible field names for compatibility
+          const settingKey = setting.settingKey || setting.key || setting.setting_key
+          const settingValue = setting.settingValue || setting.value || setting.setting_value
+          const dataType = setting.dataType || setting.data_type
+          
+          if (settingsMap[settingKey]) {
+            // Parse the value based on data type
+            let parsedValue = settingValue
+            try {
+              // Try to parse JSON (values are stored as JSON strings)
+              parsedValue = JSON.parse(settingValue)
+            } catch {
+              // If not JSON, use as is
+              parsedValue = settingValue
+            }
+            
+            // For numeric settings, ensure it's a number
+            if (dataType === 'number' || (typeof parsedValue === 'number' && !settingsMap[settingKey].options)) {
+              parsedValue = Number(parsedValue) || 0
+            }
+            
+            settingsMap[settingKey] = {
+              ...settingsMap[settingKey],
               id: setting.id,
-              value: Number(setting.settingValue) || 0
+              value: parsedValue
             }
           }
         })
@@ -137,19 +182,34 @@ export default function SimplifiedSettingsPage() {
     }
   }
 
-  const handleSettingChange = (key: string, value: string) => {
-    const numValue = Number(value) || 0
+  const handleSettingChange = (key: string, value: string | number) => {
     const setting = settings[key]
+    if (!setting) return
     
-    // Validate min/max
-    if (setting?.min !== undefined && numValue < setting.min) return
-    if (setting?.max !== undefined && numValue > setting.max) return
+    // Determine if this is a numeric or string setting
+    const foundSetting = settingCategories[activeTab as keyof typeof settingCategories]
+      ?.settings.find(s => s.key === key)
+    const isNumericSetting = !(foundSetting && 'options' in foundSetting && foundSetting.options)
+    
+    let finalValue: string | number = value
+    
+    if (isNumericSetting) {
+      // Handle numeric settings
+      const numValue = Number(value) || 0
+      
+      // Validate min/max for numeric settings
+      if (setting.min !== undefined && numValue < setting.min) return
+      if (setting.max !== undefined && numValue > setting.max) return
+      
+      finalValue = numValue
+    }
+    // For string settings (dropdowns), use value as is
     
     setSettings(prev => ({
       ...prev,
       [key]: {
         ...prev[key],
-        value: numValue
+        value: finalValue
       }
     }))
     setHasChanges(true)
@@ -158,19 +218,29 @@ export default function SimplifiedSettingsPage() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      // Prepare updates
-      const updates = Object.values(settings).map(setting => ({
-        key: setting.key,
-        value: setting.value,
-        dataType: 'number'
-      }))
+      // Prepare updates - ensure all values are properly formatted
+      const updates = Object.values(settings)
+        .filter(setting => setting.key && setting.value !== undefined)
+        .map(setting => {
+          // Don't JSON stringify - send raw values
+          // Backend expects: numbers as numbers, strings as strings
+          
+          return {
+            key: setting.key,
+            value: setting.value,
+            // Determine dataType based on the actual value type
+            dataType: typeof setting.value === 'string' ? 'string' : 'number',
+            categoryId: setting.categoryId
+          }
+        })
       
       await settingsService.batchUpdateSettings(updates)
       toast.success('Settings saved successfully')
       setHasChanges(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save settings:', error)
-      toast.error('Failed to save settings')
+      const errorMessage = error?.response?.data?.error || 'Failed to save settings'
+      toast.error(errorMessage)
     } finally {
       setIsSaving(false)
     }
@@ -279,22 +349,46 @@ export default function SimplifiedSettingsPage() {
                             />
                           )}
                         </label>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-gray-500">$</span>
-                          <Input
-                            type="number"
-                            value={setting.value}
-                            onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                            min={setting.min}
-                            max={setting.max}
-                            step={setting.unit === '%' ? 0.1 : 1}
-                            className="flex-1"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Current: {formatCurrency(setting.value)}
-                          {setting.unit === '%' && '%'}
-                        </p>
+                        
+                        {/* Render dropdown for settings with options */}
+                        {'options' in settingDef && settingDef.options ? (
+                          <div>
+                            <Select
+                              value={'options' in settingDef && settingDef.options ? settingDef.options.find(opt => opt.value === setting.value) || null : null}
+                              options={'options' in settingDef && settingDef.options ? settingDef.options : []}
+                              onChange={(option) => handleSettingChange(setting.key, option?.value || 'exclusive')}
+                              placeholder="Select option"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              {'options' in settingDef && settingDef.options ? settingDef.options.find(opt => opt.value === setting.value)?.label : ''}
+                            </p>
+                          </div>
+                        ) : (
+                          /* Render input for numeric settings */
+                          <>
+                            <div className="flex items-center space-x-2">
+                              {/* Show currency symbol only for non-percentage settings */}
+                              {!setting.unit?.includes('%') && <span className="text-gray-500">₦</span>}
+                              <Input
+                                type="number"
+                                value={setting.value}
+                                onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+                                min={setting.min}
+                                max={setting.max}
+                                step={setting.unit?.includes('%') ? 1 : 1}
+                                className="flex-1"
+                              />
+                              {/* Show percentage symbol for percentage settings */}
+                              {setting.unit?.includes('%') && <span className="text-gray-500">%</span>}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Current: {setting.unit?.includes('%') 
+                                ? `${setting.value}%` 
+                                : formatCurrency(Number(setting.value) || 0)
+                              }
+                            </p>
+                          </>
+                        )}
                       </div>
                     )
                   })}
@@ -310,7 +404,7 @@ export default function SimplifiedSettingsPage() {
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4 bg-blue-50 border-blue-200">
           <div className="flex items-center">
-            <PiCurrencyDollarDuotone className="h-5 w-5 text-blue-600 mr-2" />
+            <PiCurrencyNgnDuotone className="h-5 w-5 text-blue-600 mr-2" />
             <div>
               <p className="text-sm font-medium text-blue-900">Lease Pricing</p>
               <p className="text-xs text-blue-700">Daily rates + deposits</p>

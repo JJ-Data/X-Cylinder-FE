@@ -21,6 +21,7 @@ import { toast } from 'react-hot-toast'
 import type { ZodType } from 'zod'
 import { formatCurrency } from '@/utils/format'
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import { refillService } from '@/services/api/refill.service'
 
 const refillSchema: ZodType<RefillFormData> = z.object({
     cylinderCode: z.string().min(1, 'Cylinder code is required'),
@@ -56,6 +57,9 @@ export function RefillForm({}: RefillFormProps) {
     const [cylinderId, setCylinderId] = useState<number | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
+    const [pricePerKg, setPricePerKg] = useState<number>(10)
+    const [loadingPrice, setLoadingPrice] = useState(true)
+    const [priceQuote, setPriceQuote] = useState<any>(null)
 
     const { createRefill } = useRefillMutations()
     const { data: cylinder } = useCylinder(cylinderId || undefined)
@@ -82,12 +86,36 @@ export function RefillForm({}: RefillFormProps) {
     const watchedValues = watch()
     const watchedPaymentMethod = watch('paymentMethod')
 
-    // Calculate cost based on volume (example: $10 per kg)
+    // Fetch price quote when volume changes
     useEffect(() => {
-        const pricePerKg = 10
-        const calculatedCost = watchedValues.volume * pricePerKg
-        setValue('cost', calculatedCost)
-    }, [watchedValues.volume, setValue])
+        const fetchPriceQuote = async () => {
+            if (watchedValues.volume > 0) {
+                try {
+                    setLoadingPrice(true)
+                    const quote = await refillService.getRefillQuote(
+                        cylinder?.type || undefined,
+                        watchedValues.volume
+                    )
+                    setPriceQuote(quote)
+                    setPricePerKg(quote.pricePerKg)
+                    setValue('cost', quote.totalPrice)
+                } catch (error) {
+                    console.error('Failed to fetch price quote:', error)
+                    // Fallback to simple calculation
+                    const calculatedCost = watchedValues.volume * pricePerKg
+                    setValue('cost', calculatedCost)
+                } finally {
+                    setLoadingPrice(false)
+                }
+            } else {
+                setValue('cost', 0)
+                setPriceQuote(null)
+                setLoadingPrice(false)
+            }
+        }
+
+        fetchPriceQuote()
+    }, [watchedValues.volume, cylinder?.type, setValue]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleQRScan = (code: string) => {
         setValue('cylinderCode', code)
@@ -289,6 +317,28 @@ export function RefillForm({}: RefillFormProps) {
                         <AdaptiveCard>
                             <div className="p-4 md:p-6">
                                 <h4 className="mb-6">Refill Details</h4>
+                                
+                                {/* Price per kg display */}
+                                {!loadingPrice && pricePerKg > 0 && (
+                                    <Alert className="mb-4" showIcon>
+                                        <div className="flex justify-between items-center">
+                                            <span>Current Price per KG:</span>
+                                            <span className="font-bold text-lg">
+                                                {formatCurrency(pricePerKg)}/kg
+                                            </span>
+                                        </div>
+                                    </Alert>
+                                )}
+                                
+                                {loadingPrice && (
+                                    <Alert type="info" className="mb-4">
+                                        <div className="flex items-center">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
+                                            Loading pricing information...
+                                        </div>
+                                    </Alert>
+                                )}
+                                
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <FormItem
                                         label="Gas Volume (kg)"
@@ -328,20 +378,29 @@ export function RefillForm({}: RefillFormProps) {
                                             name="cost"
                                             control={control}
                                             render={({ field }) => (
-                                                <Input
-                                                    {...field}
-                                                    type="number"
-                                                    step="0.01"
-                                                    placeholder="Calculated automatically"
-                                                    autoComplete="off"
-                                                    onChange={(e) =>
-                                                        field.onChange(
-                                                            Number(
-                                                                e.target.value,
-                                                            ),
-                                                        )
-                                                    }
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        {...field}
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="Calculated automatically"
+                                                        autoComplete="off"
+                                                        readOnly
+                                                        className="bg-gray-50"
+                                                        onChange={(e) =>
+                                                            field.onChange(
+                                                                Number(
+                                                                    e.target.value,
+                                                                ),
+                                                            )
+                                                        }
+                                                    />
+                                                    {loadingPrice && watchedValues.volume > 0 && (
+                                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                         />
                                     </FormItem>
@@ -448,11 +507,47 @@ export function RefillForm({}: RefillFormProps) {
                         {/* Summary */}
                         {watchedValues.volume > 0 && (
                             <Alert showIcon>
-                                <div className="flex justify-between items-center">
-                                    <span>Total Amount:</span>
-                                    <span className="font-bold text-lg">
-                                        {formatCurrency(watchedValues.cost)}
-                                    </span>
+                                <div className="space-y-2">
+                                    {priceQuote && (
+                                        <>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-600">Volume:</span>
+                                                <span>{watchedValues.volume} kg</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-600">Price per kg:</span>
+                                                <span>{formatCurrency(pricePerKg)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-600">Subtotal:</span>
+                                                <span>{formatCurrency(priceQuote.subtotal)}</span>
+                                            </div>
+                                            {priceQuote.taxAmount > 0 && (
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-gray-600">
+                                                        Tax ({priceQuote.taxRate}% {priceQuote.taxType}):
+                                                    </span>
+                                                    <span>{formatCurrency(priceQuote.taxAmount)}</span>
+                                                </div>
+                                            )}
+                                            <div className="pt-2 mt-2 border-t border-gray-300">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-semibold">Total Amount:</span>
+                                                    <span className="font-bold text-lg">
+                                                        {formatCurrency(watchedValues.cost)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                    {!priceQuote && (
+                                        <div className="flex justify-between items-center">
+                                            <span>Total Amount:</span>
+                                            <span className="font-bold text-lg">
+                                                {formatCurrency(watchedValues.cost)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </Alert>
                         )}

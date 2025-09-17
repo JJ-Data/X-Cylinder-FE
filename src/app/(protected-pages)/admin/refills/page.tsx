@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import TableExportButton from '@/components/shared/TableExportButton'
+import { columnSets, generateFilename } from '@/utils/export.utils'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     PiPlusDuotone,
-    PiDownloadDuotone,
     PiMagnifyingGlassDuotone,
     PiEyeDuotone,
     PiGasPumpDuotone,
@@ -161,8 +162,8 @@ export default function RefillsPage() {
     }
 
     const handleExport = () => {
-        // TODO: Implement export functionality
-        console.log('Export refills')
+        // Export is handled by TableExportButton component
+        console.log('Exporting refills...')
     }
 
     const columns: ColumnDef<RefillRecord>[] = [
@@ -558,13 +559,14 @@ export default function RefillsPage() {
                                 Apply Filters
                             </Button>
                             {!isMobile && (
-                                <Button
-                                    variant="plain"
-                                    icon={<PiDownloadDuotone />}
-                                    onClick={handleExport}
-                                >
-                                    Export
-                                </Button>
+                                <TableExportButton
+                                    data={refills || []}
+                                    columns={columnSets.refills}
+                                    filename={generateFilename('refills', 'csv')}
+                                    title="Refill Management Report"
+                                    buttonText="Export"
+                                    disabled={isLoading || !refills?.length}
+                                />
                             )}
                         </div>
 

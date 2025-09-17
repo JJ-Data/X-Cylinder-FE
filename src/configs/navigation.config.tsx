@@ -8,7 +8,7 @@ import {
 // Customer Navigation
 export const customerNavigation: NavigationTree[] = [
     {
-        key: 'dashboard',
+        key: 'customer.dashboard',
         path: '/customer/dashboard',
         title: 'Dashboard',
         translateKey: 'nav.dashboard',
@@ -18,7 +18,7 @@ export const customerNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'cylinders',
+        key: 'customer.cylinders',
         path: '/customer/cylinders',
         title: 'My Cylinders',
         translateKey: 'nav.myCylinders',
@@ -28,7 +28,7 @@ export const customerNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'leaseNew',
+        key: 'customer.leaseNew',
         path: '/customer/lease-new',
         title: 'Lease New Cylinder',
         translateKey: 'nav.leaseNew',
@@ -38,7 +38,7 @@ export const customerNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'transactions',
+        key: 'customer.transactions',
         path: '/customer/transactions',
         title: 'Transaction History',
         translateKey: 'nav.transactions',
@@ -58,7 +58,7 @@ export const customerNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'profile',
+        key: 'customer.profile',
         path: '/customer/profile',
         title: 'My Profile',
         translateKey: 'nav.profile',
@@ -68,7 +68,7 @@ export const customerNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'settings',
+        key: 'customer.settings',
         path: '/customer/settings',
         title: 'Settings',
         translateKey: 'nav.settings',
@@ -82,7 +82,7 @@ export const customerNavigation: NavigationTree[] = [
 // Staff Navigation
 export const staffNavigation: NavigationTree[] = [
     {
-        key: 'dashboard',
+        key: 'staff.dashboard',
         path: '/staff/dashboard',
         title: 'Dashboard',
         translateKey: 'nav.dashboard',
@@ -92,7 +92,7 @@ export const staffNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'cylinders',
+        key: 'staff.cylinders',
         path: '/staff/cylinders',
         title: 'Cylinders',
         translateKey: 'nav.cylinders',
@@ -101,7 +101,7 @@ export const staffNavigation: NavigationTree[] = [
         authority: ['STAFF'],
         subMenu: [
             {
-                key: 'allCylinders',
+                key: 'staff.cylinders.all',
                 path: '/staff/cylinders',
                 title: 'All Cylinders',
                 translateKey: 'nav.allCylinders',
@@ -111,7 +111,7 @@ export const staffNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'available',
+                key: 'staff.cylinders.available',
                 path: '/staff/cylinders?status=available',
                 title: 'Available',
                 translateKey: 'nav.available',
@@ -121,7 +121,7 @@ export const staffNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'leased',
+                key: 'staff.cylinders.leased',
                 path: '/staff/cylinders?status=leased',
                 title: 'Leased',
                 translateKey: 'nav.leased',
@@ -133,7 +133,7 @@ export const staffNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'customers',
+        key: 'staff.customers',
         path: '/staff/customers',
         title: 'Customers',
         translateKey: 'nav.customers',
@@ -143,7 +143,7 @@ export const staffNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'leasing',
+        key: 'staff.leasing',
         path: '/staff/leasing',
         title: 'Leasing',
         translateKey: 'nav.leasing',
@@ -152,7 +152,7 @@ export const staffNavigation: NavigationTree[] = [
         authority: ['STAFF'],
         subMenu: [
             {
-                key: 'allLeases',
+                key: 'staff.leasing.all',
                 path: '/staff/leasing',
                 title: 'All Leases',
                 translateKey: 'nav.allLeases',
@@ -162,7 +162,7 @@ export const staffNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newLease',
+                key: 'staff.leasing.new',
                 path: '/staff/leasing/new',
                 title: 'New Lease',
                 translateKey: 'nav.newLease',
@@ -172,7 +172,7 @@ export const staffNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'returns',
+                key: 'staff.leasing.returns',
                 path: '/staff/leasing/returns',
                 title: 'Process Return',
                 translateKey: 'nav.processReturn',
@@ -184,7 +184,7 @@ export const staffNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'swaps',
+        key: 'staff.swaps',
         path: '/staff/swaps',
         title: 'Cylinder Swaps',
         translateKey: 'nav.swaps',
@@ -193,7 +193,7 @@ export const staffNavigation: NavigationTree[] = [
         authority: ['STAFF'],
         subMenu: [
             {
-                key: 'allSwaps',
+                key: 'staff.swaps.all',
                 path: '/staff/swaps',
                 title: 'All Swaps',
                 translateKey: 'nav.allSwaps',
@@ -203,7 +203,7 @@ export const staffNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newSwap',
+                key: 'staff.swaps.new',
                 path: '/staff/swaps/new',
                 title: 'Process Swap',
                 translateKey: 'nav.processSwap',
@@ -215,7 +215,7 @@ export const staffNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'refills',
+        key: 'staff.refills',
         path: '/staff/refills',
         title: 'Refills',
         translateKey: 'nav.refills',
@@ -224,7 +224,7 @@ export const staffNavigation: NavigationTree[] = [
         authority: ['STAFF'],
         subMenu: [
             {
-                key: 'allRefills',
+                key: 'staff.refills.all',
                 path: '/staff/refills',
                 title: 'All Refills',
                 translateKey: 'nav.allRefills',
@@ -234,7 +234,7 @@ export const staffNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newRefill',
+                key: 'staff.refills.new',
                 path: '/staff/refills/new',
                 title: 'Record Refill',
                 translateKey: 'nav.recordRefill',
@@ -246,7 +246,7 @@ export const staffNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'transactions',
+        key: 'staff.transactions',
         path: '/staff/transactions',
         title: 'Transactions',
         translateKey: 'nav.transactions',
@@ -266,7 +266,7 @@ export const staffNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'registerCustomer',
+        key: 'staff.registerCustomer',
         path: '/staff/customers/register',
         title: 'Register Customer',
         translateKey: 'nav.registerCustomer',
@@ -280,7 +280,7 @@ export const staffNavigation: NavigationTree[] = [
 // Operator Navigation
 export const operatorNavigation: NavigationTree[] = [
     {
-        key: 'dashboard',
+        key: 'operator.dashboard',
         path: '/operator/dashboard',
         title: 'Dashboard',
         translateKey: 'nav.dashboard',
@@ -290,7 +290,7 @@ export const operatorNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'refills',
+        key: 'operator.refills',
         path: '/operator/refills',
         title: 'Refills',
         translateKey: 'nav.refills',
@@ -299,7 +299,7 @@ export const operatorNavigation: NavigationTree[] = [
         authority: ['REFILL_OP'],
         subMenu: [
             {
-                key: 'allRefills',
+                key: 'operator.refills.all',
                 path: '/operator/refills',
                 title: 'All Refills',
                 translateKey: 'nav.allRefills',
@@ -309,7 +309,7 @@ export const operatorNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newRefill',
+                key: 'operator.refills.new',
                 path: '/operator/refills/new',
                 title: 'Record Refill',
                 translateKey: 'nav.recordRefill',
@@ -321,7 +321,7 @@ export const operatorNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'swaps',
+        key: 'operator.swaps',
         path: '/operator/swaps',
         title: 'Cylinder Swaps',
         translateKey: 'nav.swaps',
@@ -330,7 +330,7 @@ export const operatorNavigation: NavigationTree[] = [
         authority: ['REFILL_OP'],
         subMenu: [
             {
-                key: 'allSwaps',
+                key: 'operator.swaps.all',
                 path: '/operator/swaps',
                 title: 'All Swaps',
                 translateKey: 'nav.allSwaps',
@@ -340,7 +340,7 @@ export const operatorNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newSwap',
+                key: 'operator.swaps.new',
                 path: '/operator/swaps/new',
                 title: 'Process Swap',
                 translateKey: 'nav.processSwap',
@@ -356,7 +356,7 @@ export const operatorNavigation: NavigationTree[] = [
 // Admin Navigation
 export const adminNavigation: NavigationTree[] = [
     {
-        key: 'dashboard',
+        key: 'admin.dashboard',
         path: '/admin/dashboard',
         title: 'Dashboard',
         translateKey: 'nav.dashboard',
@@ -366,7 +366,7 @@ export const adminNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'analytics',
+        key: 'admin.analytics',
         path: '/admin/analytics',
         title: 'Analytics',
         translateKey: 'nav.analytics',
@@ -375,7 +375,7 @@ export const adminNavigation: NavigationTree[] = [
         authority: ['ADMIN'],
         subMenu: [
             {
-                key: 'analyticsOverview',
+                key: 'admin.analytics.overview',
                 path: '/admin/analytics',
                 title: 'Overview',
                 translateKey: 'nav.analyticsOverview',
@@ -385,7 +385,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'revenueAnalytics',
+                key: 'admin.analytics.revenue',
                 path: '/admin/analytics/revenue',
                 title: 'Revenue',
                 translateKey: 'nav.revenueAnalytics',
@@ -395,7 +395,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'outletAnalytics',
+                key: 'admin.analytics.outlets',
                 path: '/admin/analytics/outlets',
                 title: 'Outlet Performance',
                 translateKey: 'nav.outletAnalytics',
@@ -405,7 +405,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'cylinderAnalytics',
+                key: 'admin.analytics.cylinders',
                 path: '/admin/analytics/cylinders',
                 title: 'Cylinder Utilization',
                 translateKey: 'nav.cylinderAnalytics',
@@ -415,7 +415,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'customerAnalytics',
+                key: 'admin.analytics.customers',
                 path: '/admin/analytics/customers',
                 title: 'Customer Analytics',
                 translateKey: 'nav.customerAnalytics',
@@ -425,7 +425,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'operatorAnalytics',
+                key: 'admin.analytics.operators',
                 path: '/admin/analytics/operators',
                 title: 'Operator Performance',
                 translateKey: 'nav.operatorAnalytics',
@@ -435,6 +435,16 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
         ],
+    },
+    {
+        key: 'admin.reports',
+        path: '/admin/reports',
+        title: 'Reports',
+        translateKey: 'nav.reports',
+        icon: 'reports',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['ADMIN'],
+        subMenu: [],
     },
     {
         key: 'managementSection',
@@ -447,7 +457,7 @@ export const adminNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'outlets',
+        key: 'admin.outlets',
         path: '/admin/outlets',
         title: 'Outlets',
         translateKey: 'nav.outlets',
@@ -457,7 +467,7 @@ export const adminNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'users',
+        key: 'admin.users',
         path: '/admin/users',
         title: 'Users',
         translateKey: 'nav.users',
@@ -467,7 +477,7 @@ export const adminNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'registerCustomer',
+        key: 'admin.registerCustomer',
         path: '/admin/customers/register',
         title: 'Register Customer',
         translateKey: 'nav.registerCustomer',
@@ -477,7 +487,7 @@ export const adminNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'cylinders',
+        key: 'admin.cylinders',
         path: '/admin/cylinders',
         title: 'Cylinders',
         translateKey: 'nav.cylinders',
@@ -486,7 +496,7 @@ export const adminNavigation: NavigationTree[] = [
         authority: ['ADMIN'],
         subMenu: [
             {
-                key: 'allCylinders',
+                key: 'admin.cylinders.all',
                 path: '/admin/cylinders',
                 title: 'All Cylinders',
                 translateKey: 'nav.allCylinders',
@@ -496,7 +506,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'transferCylinder',
+                key: 'admin.cylinders.transfer',
                 path: '/admin/cylinders/transfer',
                 title: 'Transfer Cylinder',
                 translateKey: 'nav.transferCylinder',
@@ -506,7 +516,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'scanCylinder',
+                key: 'admin.cylinders.scan',
                 path: '/admin/cylinders/scan',
                 title: 'Scan QR Code',
                 translateKey: 'nav.scanQR',
@@ -518,7 +528,7 @@ export const adminNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'leases',
+        key: 'admin.leases',
         path: '/admin/leases',
         title: 'Leases',
         translateKey: 'nav.leases',
@@ -527,7 +537,7 @@ export const adminNavigation: NavigationTree[] = [
         authority: ['ADMIN'],
         subMenu: [
             {
-                key: 'allLeases',
+                key: 'admin.leases.all',
                 path: '/admin/leases',
                 title: 'All Leases',
                 translateKey: 'nav.allLeases',
@@ -537,7 +547,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newLease',
+                key: 'admin.leases.new',
                 path: '/admin/leases/new',
                 title: 'New Lease',
                 translateKey: 'nav.newLease',
@@ -547,7 +557,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'returnLease',
+                key: 'admin.leases.return',
                 path: '/admin/leases/return',
                 title: 'Process Return',
                 translateKey: 'nav.processReturn',
@@ -557,7 +567,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'overdueLeases',
+                key: 'admin.leases.overdue',
                 path: '/admin/leases?status=overdue',
                 title: 'Overdue Leases',
                 translateKey: 'nav.overdueLeases',
@@ -569,7 +579,7 @@ export const adminNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'refills',
+        key: 'admin.refills',
         path: '/admin/refills',
         title: 'Refills',
         translateKey: 'nav.refills',
@@ -578,7 +588,7 @@ export const adminNavigation: NavigationTree[] = [
         authority: ['ADMIN'],
         subMenu: [
             {
-                key: 'allRefills',
+                key: 'admin.refills.all',
                 path: '/admin/refills',
                 title: 'All Refills',
                 translateKey: 'nav.allRefills',
@@ -588,7 +598,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newRefill',
+                key: 'admin.refills.new',
                 path: '/admin/refills/new',
                 title: 'Record Refill',
                 translateKey: 'nav.recordRefill',
@@ -598,7 +608,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'bulkRefill',
+                key: 'admin.refills.bulk',
                 path: '/admin/refills/bulk',
                 title: 'Bulk Refill',
                 translateKey: 'nav.bulkRefill',
@@ -610,7 +620,7 @@ export const adminNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'swaps',
+        key: 'admin.swaps',
         path: '/admin/swaps',
         title: 'Cylinder Swaps',
         translateKey: 'nav.swaps',
@@ -619,7 +629,7 @@ export const adminNavigation: NavigationTree[] = [
         authority: ['ADMIN'],
         subMenu: [
             {
-                key: 'allSwaps',
+                key: 'admin.swaps.all',
                 path: '/admin/swaps',
                 title: 'All Swaps',
                 translateKey: 'nav.allSwaps',
@@ -629,7 +639,7 @@ export const adminNavigation: NavigationTree[] = [
                 subMenu: [],
             },
             {
-                key: 'newSwap',
+                key: 'admin.swaps.new',
                 path: '/admin/swaps/new',
                 title: 'Process Swap',
                 translateKey: 'nav.processSwap',
@@ -641,7 +651,7 @@ export const adminNavigation: NavigationTree[] = [
         ],
     },
     {
-        key: 'transfers',
+        key: 'admin.transfers',
         path: '/admin/transfers',
         title: 'Transfer History',
         translateKey: 'nav.transferHistory',
@@ -661,21 +671,11 @@ export const adminNavigation: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'settings',
+        key: 'admin.settings',
         path: '/admin/settings/simplified',
         title: 'Settings',
         translateKey: 'nav.settings',
         icon: 'settings',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['ADMIN'],
-        subMenu: [],
-    },
-    {
-        key: 'reports',
-        path: '/admin/reports',
-        title: 'Reports',
-        translateKey: 'nav.reports',
-        icon: 'reports',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['ADMIN'],
         subMenu: [],

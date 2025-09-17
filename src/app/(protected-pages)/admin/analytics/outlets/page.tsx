@@ -297,7 +297,18 @@ export default function OutletAnalyticsPage() {
             },
             legend: {
               position: 'top',
-              horizontalAlign: 'right'
+              horizontalAlign: 'right',
+              offsetY: -10,
+              floating: false,
+              width: undefined,
+              markers: {
+                size: 12,
+                offsetX: -5
+              },
+              itemMargin: {
+                horizontal: 20,
+                vertical: 5
+              }
             },
             yaxis: {
               title: {
@@ -338,6 +349,12 @@ export default function OutletAnalyticsPage() {
           loading={isLoading}
           customOptions={{
             colors: ['#10b981'],
+            legend: {
+              show: true,
+              position: 'bottom',
+              horizontalAlign: 'center',
+              offsetY: 5
+            },
             plotOptions: {
               bar: {
                 horizontal: true,

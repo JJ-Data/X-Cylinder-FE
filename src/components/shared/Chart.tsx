@@ -95,7 +95,11 @@ const Chart = (props: ChartProps) => {
                 lengend.style.position = 'relative'
                 lengend.style.top = '0'
                 lengend.style.justifyContent = 'start'
-                lengend.style.padding = '0'
+                lengend.style.padding = '10px 0'
+                lengend.style.marginBottom = '15px'
+                lengend.style.zIndex = '10'
+                lengend.style.flexWrap = 'wrap'
+                lengend.style.maxWidth = '100%'
             }
         }
     }, [direction])

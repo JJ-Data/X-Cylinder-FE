@@ -8,6 +8,7 @@ import Link from 'next/link'
 import signOut from '@/server/actions/auth/handleSignOut'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import ChangePasswordDialog from '@/components/auth/ChangePasswordDialog'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { PiUserDuotone, PiSignOutDuotone, PiLockDuotone } from 'react-icons/pi'
 
 import type { JSX } from 'react'
@@ -23,8 +24,10 @@ const dropdownItemList: DropdownList[] = []
 const _UserDropdown = () => {
     const { session, isLoading, isAuthenticated } = useCurrentSession()
     const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+    const [showSignOutDialog, setShowSignOutDialog] = useState(false)
 
     const handleSignOut = async () => {
+        setShowSignOutDialog(false)  // Close dialog first
         await signOut()
     }
 
@@ -98,7 +101,7 @@ const _UserDropdown = () => {
             <Dropdown.Item
                 eventKey="Sign Out"
                 className="gap-2"
-                onClick={handleSignOut}
+                onClick={() => setShowSignOutDialog(true)}
             >
                 <span className="text-xl">
                     <PiSignOutDuotone />
@@ -111,6 +114,20 @@ const _UserDropdown = () => {
                 isOpen={showPasswordDialog}
                 onClose={() => setShowPasswordDialog(false)}
             />
+            
+            <ConfirmDialog
+                isOpen={showSignOutDialog}
+                onClose={() => setShowSignOutDialog(false)}
+                onCancel={() => setShowSignOutDialog(false)}
+                onConfirm={handleSignOut}
+                type="warning"
+                title="Confirm Sign Out"
+                confirmText="Sign Out"
+                cancelText="Cancel"
+                confirmButtonProps={{ variant: 'solid' }}
+            >
+                <p>Are you sure you want to sign out? You will need to sign in again to access your account.</p>
+            </ConfirmDialog>
         </>
     )
 }

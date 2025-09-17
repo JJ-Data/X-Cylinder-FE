@@ -377,17 +377,49 @@ class SettingsService {
       key: string
       value: any
       dataType: string
+      categoryId?: number
     }>
   ): Promise<ApiResponse<void>> {
     // Create or update each setting individually
     // Since we don't have IDs, we'll use the create/update endpoint
     try {
       for (const update of updates) {
+        // Determine categoryId based on the setting key if not provided
+        let categoryId = update.categoryId
+        if (!categoryId) {
+          if (update.key.startsWith('lease.') || update.key.startsWith('return.')) {
+            categoryId = 2 // Lease category
+          } else if (update.key.startsWith('refill.')) {
+            categoryId = 3 // Refill category
+          } else if (update.key.startsWith('swap.')) {
+            categoryId = 4 // Swap category
+          } else {
+            categoryId = 10 // General category (tax, late fees, etc.)
+          }
+        }
+        
+        // Determine operation type based on setting key
+        let operationType = 'GENERAL' // Default to GENERAL for tax, late fees, business settings, etc.
+        if (update.key.startsWith('lease.') || update.key.startsWith('return.')) {
+          operationType = 'LEASE'
+        } else if (update.key.startsWith('refill.')) {
+          operationType = 'REFILL'
+        } else if (update.key.startsWith('swap.')) {
+          operationType = 'SWAP'
+        }
+        // For general settings (tax, late fees, business settings), operationType is GENERAL
+        
+        // JSON stringify the value for backend storage
+        const serializedValue = JSON.stringify(update.value)
+        
         await apiClient.post('/settings', {
-          categoryId: 1, // Default category for pricing settings
-          settingKey: update.key,
-          settingValue: update.value,
-          dataType: update.dataType || 'STRING'
+          key: update.key,
+          value: serializedValue,
+          categoryId: categoryId,
+          dataType: update.dataType || 'STRING',
+          scope: {
+            operationType: operationType
+          }
         })
       }
       return {

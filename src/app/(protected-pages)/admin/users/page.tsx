@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import TableExportButton from '@/components/shared/TableExportButton'
+import { columnSets, generateFilename } from '@/utils/export.utils'
 import { useRouter } from 'next/navigation'
 import {
     PiPlusDuotone,
@@ -14,7 +16,6 @@ import {
     PiTrendUpDuotone,
     PiMagnifyingGlassDuotone,
     PiFunnelDuotone,
-    PiDownloadDuotone,
     PiEyeDuotone,
     PiPencilDuotone,
     PiTrashDuotone,
@@ -113,8 +114,8 @@ export default function UsersPage() {
     }
 
     const handleExport = () => {
-        // TODO: Implement export functionality
-        console.log('Export users')
+        // Export is handled by TableExportButton component
+        console.log('Exporting users...')
     }
 
     // Ensure role is properly formatted for permission check
@@ -634,14 +635,15 @@ export default function UsersPage() {
                                         Clear All
                                     </Button>
                                 )}
-                                <Button
-                                    variant="plain"
-                                    icon={<PiDownloadDuotone />}
-                                    onClick={handleExport}
+                                <TableExportButton
+                                    data={users || []}
+                                    columns={columnSets.users}
+                                    filename={generateFilename('users', 'csv')}
+                                    title="User Management Report"
+                                    buttonText="Export"
                                     className="w-full md:w-auto"
-                                >
-                                    Export
-                                </Button>
+                                    disabled={isLoading || !users?.length}
+                                />
                             </div>
                         </div>
                     </div>
