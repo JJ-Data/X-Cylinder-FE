@@ -74,8 +74,9 @@ const validateCredential = async (values: SignInCredential) => {
                 role,
                 outletId: user.outletId?.toString(),
                 status: user.isActive ? 'ACTIVE' : 'INACTIVE',
-                // Store the backend JWT token
+                // Store the backend JWT tokens so the NextAuth jwt callback can refresh later
                 accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
             }
         }
 

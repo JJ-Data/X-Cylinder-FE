@@ -11,6 +11,7 @@ declare module 'next-auth' {
             authority: string[]
         } & DefaultSession['user']
         accessToken?: string
+        error?: string
     }
 
     interface User {
@@ -20,6 +21,7 @@ declare module 'next-auth' {
         outletId?: string
         status?: 'PENDING' | 'ACTIVE' | 'INACTIVE'
         accessToken?: string
+        refreshToken?: string
     }
 }
 
@@ -30,5 +32,8 @@ declare module 'next-auth/jwt' {
         outletId?: string
         status?: string
         accessToken?: string
+        refreshToken?: string
+        accessTokenExpires?: number
+        error?: string
     }
 }
