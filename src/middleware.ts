@@ -14,7 +14,10 @@ const apiAuthPrefix = `${appConfig.apiPrefix}/auth`
 
 export default auth((req) => {
     const { nextUrl } = req
-    const isSignedIn = !!req.auth
+    // A session with a failed background refresh (stale/invalid refresh token) must not
+    // count as signed in, or this bounces forever between the auth route and the app:
+    // middleware sends it into the app, the client signs it out for the bad token, repeat.
+    const isSignedIn = !!req.auth && !(req.auth as any)?.error
 
     console.log('[Middleware] Request:', {
         path: nextUrl.pathname,
