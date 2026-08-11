@@ -52,7 +52,9 @@ export default function CustomersPage() {
             cell: (customer) => (
                 <div>
                     <div className="font-medium text-gray-900">
-                        {customer.user.firstName} {customer.user.lastName}
+                        {customer.user
+                            ? `${customer.user.firstName} ${customer.user.lastName}`
+                            : 'Unknown Customer'}
                     </div>
                     <div className="text-sm text-gray-500">
                         ID: {customer.id}
@@ -67,11 +69,11 @@ export default function CustomersPage() {
                 <div className="space-y-1">
                     <div className="flex items-center text-sm">
                         <PiPhoneDuotone className="h-3 w-3 mr-1 text-gray-400" />
-                        {customer.user.phone}
+                        {customer.user?.phone || '—'}
                     </div>
                     <div className="flex items-center text-sm text-gray-500">
                         <PiEnvelopeDuotone className="h-3 w-3 mr-1 text-gray-400" />
-                        {customer.user.email}
+                        {customer.user?.email || '—'}
                     </div>
                 </div>
             ),

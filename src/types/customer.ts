@@ -19,5 +19,5 @@ export interface Customer {
     isActive: boolean
     createdAt: string
     updatedAt: string
-  }
+  } | null
 }

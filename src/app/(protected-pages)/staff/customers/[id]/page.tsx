@@ -183,8 +183,9 @@ export default function CustomerDetailsPage() {
                     <div className="flex justify-between items-start">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                                {customer.user.firstName}{' '}
-                                {customer.user.lastName}
+                                {customer.user
+                                    ? `${customer.user.firstName} ${customer.user.lastName}`
+                                    : 'Unknown Customer'}
                             </h1>
                             <div className="flex items-center space-x-4">
                                 <span
@@ -248,7 +249,7 @@ export default function CustomerDetailsPage() {
                                     Phone
                                 </dt>
                                 <dd className="text-sm text-gray-900">
-                                    {customer.user.phone}
+                                    {customer.user?.phone || '—'}
                                 </dd>
                             </div>
                             <div>
@@ -256,7 +257,7 @@ export default function CustomerDetailsPage() {
                                     Email
                                 </dt>
                                 <dd className="text-sm text-gray-900">
-                                    {customer.user.email}
+                                    {customer.user?.email || '—'}
                                 </dd>
                             </div>
                             <div>
