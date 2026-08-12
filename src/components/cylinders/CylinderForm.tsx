@@ -21,6 +21,8 @@ import DatePicker from '@/components/ui/DatePicker'
 import Container from '@/components/shared/Container'
 import BottomStickyBar from '@/components/template/BottomStickyBar'
 import Loading from '@/components/shared/Loading'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 import { useCylinder, useCylinderMutations } from '@/hooks/useCylinders'
 import { useOutlets } from '@/hooks/useOutlets'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
@@ -32,8 +34,14 @@ const cylinderSchema: ZodType<CylinderFormData> = z.object({
     type: z.string().min(1, 'Type is required'),
     currentOutletId: z.number().min(1, 'Outlet is required'),
     status: z.string().optional(),
-    currentGasVolume: z.string().optional(),
-    maxGasVolume: z.string().optional(),
+    currentGasVolume: z
+        .string()
+        .optional()
+        .refine((val) => !val || !isNaN(Number(val)), 'Must be a valid number'),
+    maxGasVolume: z
+        .string()
+        .optional()
+        .refine((val) => !val || !isNaN(Number(val)), 'Must be a valid number'),
     manufactureDate: z.date().nullable().optional(),
     lastInspectionDate: z.date().nullable().optional(),
     notes: z.string().optional(),
@@ -132,9 +140,18 @@ export function CylinderForm({ cylinderId }: CylinderFormProps) {
     const onSubmit = async (data: CylinderFormData) => {
         setIsSubmitting(true)
         try {
-            // Convert Date objects to ISO strings for API
+            // Convert Date objects to ISO strings and gas volumes to numbers for the API
             const formData = {
                 ...data,
+                currentGasVolume:
+                    data.currentGasVolume !== undefined &&
+                    data.currentGasVolume !== ''
+                        ? Number(data.currentGasVolume)
+                        : undefined,
+                maxGasVolume:
+                    data.maxGasVolume !== undefined && data.maxGasVolume !== ''
+                        ? Number(data.maxGasVolume)
+                        : undefined,
                 manufactureDate: data.manufactureDate
                     ? data.manufactureDate.toISOString()
                     : undefined,
@@ -151,6 +168,22 @@ export function CylinderForm({ cylinderId }: CylinderFormProps) {
             router.push('/admin/cylinders')
         } catch (error) {
             console.error('Failed to save cylinder:', error)
+
+            const responseData = (error as any)?.response?.data
+            const validationErrors = responseData?.errors as
+                | Record<string, string[]>
+                | undefined
+            const message = validationErrors
+                ? Object.values(validationErrors).flat().join(', ')
+                : responseData?.error ||
+                  (error as any)?.message ||
+                  'Failed to save cylinder'
+
+            toast.push(
+                <Notification title="Error" type="danger">
+                    {message}
+                </Notification>,
+            )
         } finally {
             setIsSubmitting(false)
         }
