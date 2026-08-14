@@ -146,6 +146,14 @@ export const protectedRoutes: Routes = {
         },
     },
     // Admin Customer Management routes
+    '/admin/customers': {
+        key: 'admin.customers',
+        authority: ['ADMIN'],
+        meta: {
+            pageBackgroundType: 'plain',
+            pageContainerType: 'contained',
+        },
+    },
     '/admin/customers/register': {
         key: 'admin.registerCustomer',
         authority: ['ADMIN'],

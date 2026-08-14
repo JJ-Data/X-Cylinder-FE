@@ -75,16 +75,38 @@ const getTopRouteKey = (
     return foundNav
 }
 
+// Routes that aren't in the nav tree themselves (e.g. a "[id]" detail/edit page
+// with key 'admin.cylinders.detail') fall back to their nearest ancestor key
+// ('admin.cylinders.detail' -> 'admin.cylinders') so the sidebar still highlights
+// the right section instead of showing nothing active.
+const resolveNavKey = (navTree: NavigationTree[], key: string): string => {
+    let lookupKey = key
+    while (lookupKey) {
+        if (getRouteInfo(navTree, lookupKey) || findNestedRoute(navTree, lookupKey)) {
+            return lookupKey
+        }
+        const lastDot = lookupKey.lastIndexOf('.')
+        if (lastDot === -1) break
+        lookupKey = lookupKey.slice(0, lastDot)
+    }
+    return key
+}
+
 function useMenuActive(navTree: NavigationTree[], key: string) {
+    const resolvedKey = useMemo(
+        () => resolveNavKey(navTree, key),
+        [navTree, key],
+    )
+
     const activedRoute = useMemo(() => {
-        const route = getRouteInfo(navTree, key)
+        const route = getRouteInfo(navTree, resolvedKey)
         return route
-    }, [navTree, key])
+    }, [navTree, resolvedKey])
 
     const includedRouteTree = useMemo(() => {
-        const included = getTopRouteKey(navTree, key)
+        const included = getTopRouteKey(navTree, resolvedKey)
         return included
-    }, [navTree, key])
+    }, [navTree, resolvedKey])
 
     return { activedRoute, includedRouteTree }
 }

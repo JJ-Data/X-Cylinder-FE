@@ -15,6 +15,7 @@ import {
     PiWarningCircleDuotone
 } from 'react-icons/pi'
 import { CylinderStatus } from '../shared/StatusBadge'
+import { CYLINDER_TYPE_OPTIONS } from '@/constants/cylinder.constant'
 
 interface CylinderFiltersProps {
     onFilterChange: (filters: CylinderFilterValues) => void
@@ -53,14 +54,7 @@ const cylinderTypeOptions: SelectOption[] = [
 
 const capacityOptions: SelectOption[] = [
     { value: '', label: 'All Capacities' },
-    { value: '5kg', label: '5kg' },
-    { value: '10kg', label: '10kg' },
-    { value: '12kg', label: '12kg' },
-    { value: '15kg', label: '15kg' },
-    { value: '20kg', label: '20kg' },
-    { value: '25kg', label: '25kg' },
-    { value: '45kg', label: '45kg' },
-    { value: '50kg', label: '50kg' },
+    ...CYLINDER_TYPE_OPTIONS,
 ]
 
 export const CylinderFilters: React.FC<CylinderFiltersProps> = ({

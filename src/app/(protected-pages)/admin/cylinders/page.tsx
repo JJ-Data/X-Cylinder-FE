@@ -37,6 +37,7 @@ import { VolumeGaugeMini } from '@/components/shared/VolumeGauge'
 import { formatDate } from '@/utils/format'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
 import CylinderCard from '@/components/cylinders/CylinderCard'
+import { CYLINDER_TYPE_OPTIONS } from '@/constants/cylinder.constant'
 import type { ColumnDef } from '@/components/shared/DataTable'
 import type { Cylinder, CylinderStatus, CylinderType } from '@/types/cylinder'
 
@@ -52,10 +53,7 @@ const statusOptions = [
 
 const typeOptions = [
     { value: '', label: 'All Types' },
-    { value: '5kg', label: '5kg' },
-    { value: '10kg', label: '10kg' },
-    { value: '15kg', label: '15kg' },
-    { value: '50kg', label: '50kg' },
+    ...CYLINDER_TYPE_OPTIONS,
 ]
 
 const getCylinderStatusClass = (status: string) => {

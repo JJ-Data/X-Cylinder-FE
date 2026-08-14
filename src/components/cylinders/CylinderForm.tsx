@@ -26,6 +26,7 @@ import Notification from '@/components/ui/Notification'
 import { useCylinder, useCylinderMutations } from '@/hooks/useCylinders'
 import { useOutlets } from '@/hooks/useOutlets'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
+import { CYLINDER_TYPE_OPTIONS } from '@/constants/cylinder.constant'
 import type { ZodType } from 'zod'
 import type { SelectOption } from '@/types/common-ui'
 
@@ -59,13 +60,7 @@ type CylinderFormData = {
     notes?: string
 }
 
-const cylinderTypeOptions = [
-    { value: '5kg', label: '5kg' },
-    { value: '10kg', label: '10kg' },
-    { value: '15kg', label: '15kg' },
-    { value: '25kg', label: '25kg' },
-    { value: '50kg', label: '50kg' },
-]
+const cylinderTypeOptions = CYLINDER_TYPE_OPTIONS
 
 const statusOptions = [
     { value: 'available', label: 'Available' },

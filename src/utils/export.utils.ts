@@ -206,7 +206,12 @@ export const exportToPDF = (config: PDFExportConfig): void => {
 
   // Prepare table data
   const headers = columns.map(col => col.header)
-  const rows = formatDataForExport(data, columns)
+  // jsPDF's built-in fonts (Helvetica/Times/Courier) only cover the WinAnsi/Latin-1
+  // character set - they can't render the Naira sign (₦), so it comes out blank/garbled.
+  // Swap it for an ASCII-safe "NGN" here only; CSV export keeps the real symbol.
+  const rows = formatDataForExport(data, columns).map(row =>
+    row.map(cell => String(cell).replace(/₦/g, 'NGN '))
+  )
 
   // Calculate column widths based on orientation and page size
   const pageWidth = orientation === 'landscape' ? 
