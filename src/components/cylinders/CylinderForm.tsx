@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -26,27 +26,64 @@ import Notification from '@/components/ui/Notification'
 import { useCylinder, useCylinderMutations } from '@/hooks/useCylinders'
 import { useOutlets } from '@/hooks/useOutlets'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
-import { CYLINDER_TYPE_OPTIONS } from '@/constants/cylinder.constant'
-import type { ZodType } from 'zod'
+import { CYLINDER_TYPE_OPTIONS, CYLINDER_TYPE_CAPACITY_KG } from '@/constants/cylinder.constant'
 import type { SelectOption } from '@/types/common-ui'
 
-const cylinderSchema: ZodType<CylinderFormData> = z.object({
-    cylinderCode: z.string().min(3, 'Code must be at least 3 characters'),
-    type: z.string().min(1, 'Type is required'),
-    currentOutletId: z.number().min(1, 'Outlet is required'),
-    status: z.string().optional(),
-    currentGasVolume: z
-        .string()
-        .optional()
-        .refine((val) => !val || !isNaN(Number(val)), 'Must be a valid number'),
-    maxGasVolume: z
-        .string()
-        .optional()
-        .refine((val) => !val || !isNaN(Number(val)), 'Must be a valid number'),
-    manufactureDate: z.date().nullable().optional(),
-    lastInspectionDate: z.date().nullable().optional(),
-    notes: z.string().optional(),
-})
+const cylinderSchema = z
+    .object({
+        cylinderCode: z.string().min(3, 'Code must be at least 3 characters'),
+        type: z.string().min(1, 'Type is required'),
+        currentOutletId: z.number().min(1, 'Outlet is required'),
+        status: z.string().optional(),
+        currentGasVolume: z
+            .string()
+            .optional()
+            .refine(
+                (val) => !val || !isNaN(Number(val)),
+                'Must be a valid number',
+            ),
+        maxGasVolume: z
+            .string()
+            .optional()
+            .refine(
+                (val) => !val || !isNaN(Number(val)),
+                'Must be a valid number',
+            ),
+        manufactureDate: z.date().nullable().optional(),
+        lastInspectionDate: z.date().nullable().optional(),
+        notes: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+        const capacity = CYLINDER_TYPE_CAPACITY_KG[data.type]
+        const maxVolume =
+            data.maxGasVolume !== undefined && data.maxGasVolume !== ''
+                ? Number(data.maxGasVolume)
+                : undefined
+        const currentVolume =
+            data.currentGasVolume !== undefined && data.currentGasVolume !== ''
+                ? Number(data.currentGasVolume)
+                : undefined
+
+        if (capacity !== undefined && maxVolume !== undefined && maxVolume > capacity) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['maxGasVolume'],
+                message: `Cannot exceed ${capacity}kg for a ${data.type} cylinder`,
+            })
+        }
+
+        if (
+            maxVolume !== undefined &&
+            currentVolume !== undefined &&
+            currentVolume > maxVolume
+        ) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['currentGasVolume'],
+                message: 'Cannot exceed max gas volume',
+            })
+        }
+    })
 
 type CylinderFormData = {
     cylinderCode: string
@@ -91,6 +128,8 @@ export function CylinderForm({ cylinderId }: CylinderFormProps) {
     const {
         handleSubmit,
         reset,
+        getValues,
+        setValue,
         formState: { errors },
         control,
         watch,
@@ -110,10 +149,16 @@ export function CylinderForm({ cylinderId }: CylinderFormProps) {
     })
 
     const watchManufactureDate = watch('manufactureDate')
+    const watchType = watch('type')
 
-    // Populate form with existing data
+    // Populate form with existing data - only once per cylinder. SWR can hand back a
+    // fresh `cylinder` object reference on background revalidation; re-running reset()
+    // on every one of those would silently wipe out whatever the admin was mid-editing
+    // (e.g. a Status change) back to the last-saved server value.
+    const initializedForCylinderId = useRef<number | undefined>(undefined)
     useEffect(() => {
-        if (cylinder) {
+        if (cylinder && initializedForCylinderId.current !== cylinderId) {
+            initializedForCylinderId.current = cylinderId
             reset({
                 cylinderCode: cylinder.cylinderCode,
                 type: cylinder.type,
@@ -130,7 +175,21 @@ export function CylinderForm({ cylinderId }: CylinderFormProps) {
                 notes: cylinder.notes || '',
             })
         }
-    }, [cylinder, reset])
+    }, [cylinder, cylinderId, reset])
+
+    // Auto-fill/cap the max gas volume to the selected type's capacity, e.g.
+    // picking '15kg' fills max volume with 15 and won't let it stay above that.
+    useEffect(() => {
+        const capacity = CYLINDER_TYPE_CAPACITY_KG[watchType]
+        if (capacity === undefined) return
+
+        const currentMax = getValues('maxGasVolume')
+        if (!currentMax || Number(currentMax) > capacity) {
+            setValue('maxGasVolume', String(capacity), {
+                shouldValidate: true,
+            })
+        }
+    }, [watchType, getValues, setValue])
 
     const onSubmit = async (data: CylinderFormData) => {
         setIsSubmitting(true)

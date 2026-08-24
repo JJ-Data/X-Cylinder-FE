@@ -53,7 +53,10 @@ const VALID_ROUTES = [
     
     // Customer routes
     '/customer/dashboard',
-    
+    '/customer/cylinders',
+    '/customer/lease-new',
+    '/customer/transactions',
+
     // Common routes that should redirect to appropriate dashboard
     '/home',
     '/dashboard',

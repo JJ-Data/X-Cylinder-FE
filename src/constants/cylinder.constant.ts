@@ -10,3 +10,11 @@ export const CYLINDER_TYPE_OPTIONS = CYLINDER_TYPES.map((value) => ({
     value,
     label: value,
 }))
+
+// Max gas capacity (kg) implied by each type string, e.g. '15kg' -> 15.
+// Used to auto-fill/cap the max gas volume field so a 15kg cylinder can't be
+// entered with a 50kg max volume.
+export const CYLINDER_TYPE_CAPACITY_KG: Record<string, number> =
+    Object.fromEntries(
+        CYLINDER_TYPES.map((value) => [value, parseInt(value, 10)]),
+    )

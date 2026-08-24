@@ -689,6 +689,30 @@ export const protectedRoutes: Routes = {
             pageContainerType: 'contained',
         },
     },
+    '/customer/cylinders': {
+        key: 'customer.cylinders',
+        authority: ['CUSTOMER'],
+        meta: {
+            pageBackgroundType: 'plain',
+            pageContainerType: 'contained',
+        },
+    },
+    '/customer/lease-new': {
+        key: 'customer.leaseNew',
+        authority: ['CUSTOMER'],
+        meta: {
+            pageBackgroundType: 'plain',
+            pageContainerType: 'contained',
+        },
+    },
+    '/customer/transactions': {
+        key: 'customer.transactions',
+        authority: ['CUSTOMER'],
+        meta: {
+            pageBackgroundType: 'plain',
+            pageContainerType: 'contained',
+        },
+    },
 }
 
 export const publicRoutes: Routes = {}
