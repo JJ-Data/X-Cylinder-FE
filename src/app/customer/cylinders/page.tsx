@@ -1,24 +1,28 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useCustomerActiveLeases } from '@/hooks/useLeases'
+import { useCurrentCustomerId } from '@/hooks/useCurrentCustomer'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
 import { formatDate } from '@/utils/format'
 import { LeaseStatus } from '@/types/cylinder'
 
 export default function CustomerCylindersPage() {
-    const { data: session } = useSession()
-    const customerId = session?.user?.id
-        ? parseInt(session.user.id)
-        : undefined
+    const {
+        customerId,
+        isLoading: customerLoading,
+        error: customerError,
+    } = useCurrentCustomerId()
 
     const {
         data: activeLeases,
-        error,
-        isLoading,
+        error: leaseError,
+        isLoading: leaseLoading,
     } = useCustomerActiveLeases(customerId)
+
+    const isLoading = customerLoading || leaseLoading
+    const error = customerError || leaseError
 
     return (
         <div className="container mx-auto px-4 py-8">

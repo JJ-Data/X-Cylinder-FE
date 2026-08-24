@@ -1,22 +1,26 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useCustomerTransactions } from '@/hooks/useCustomers'
+import { useCurrentCustomerId } from '@/hooks/useCurrentCustomer'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
 import { formatDate, formatCurrency } from '@/utils/format'
 
 export default function CustomerTransactionsPage() {
-    const { data: session } = useSession()
-    const customerId = session?.user?.id
-        ? parseInt(session.user.id)
-        : undefined
+    const {
+        customerId,
+        isLoading: customerLoading,
+        error: customerError,
+    } = useCurrentCustomerId()
 
     const {
         data: transactions,
-        error,
-        isLoading,
+        error: transactionsError,
+        isLoading: transactionsLoading,
     } = useCustomerTransactions(customerId)
+
+    const isLoading = customerLoading || transactionsLoading
+    const error = customerError || transactionsError
 
     return (
         <div className="container mx-auto px-4 py-8">

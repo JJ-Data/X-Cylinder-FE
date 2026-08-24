@@ -6,6 +6,7 @@ import {
     useCustomerActiveLeases,
     useCustomerLeaseHistory,
 } from '@/hooks/useLeases'
+import { useCurrentCustomerId } from '@/hooks/useCurrentCustomer'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
 import { formatCurrency, formatDate } from '@/utils/format'
@@ -17,7 +18,11 @@ export default function CustomerDashboard() {
     const { activeRole } = useAuthStore()
 
     // Fetch customer-specific data
-    const customerId = session?.user?.id ? parseInt(session.user.id) : undefined
+    const {
+        customerId,
+        isLoading: customerLoading,
+        error: customerError,
+    } = useCurrentCustomerId()
     const {
         data: activeLeases,
         error: leaseError,
@@ -29,8 +34,10 @@ export default function CustomerDashboard() {
         isLoading: historyLoading,
     } = useCustomerLeaseHistory(customerId)
 
-    const isLoading = leaseLoading || historyLoading
-    const hasError = leaseError || historyError
+    const isLoading = customerLoading || leaseLoading || historyLoading
+    const noCustomerProfile =
+        !customerLoading && !customerId && !customerError
+    const hasError = customerError || leaseError || historyError
 
     // Calculate metrics
     const activeLeasesCount = activeLeases?.length || 0
@@ -62,6 +69,12 @@ export default function CustomerDashboard() {
             {hasError && (
                 <Alert type="danger" className="mb-6">
                     Failed to load dashboard data. Please try again later.
+                </Alert>
+            )}
+            {noCustomerProfile && (
+                <Alert type="warning" className="mb-6">
+                    We couldn&apos;t find a customer profile linked to your
+                    account. Please contact support.
                 </Alert>
             )}
 
