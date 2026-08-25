@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import { analyticsService } from '@/services/api/analytics.service'
 import type {
   ReportFilters,

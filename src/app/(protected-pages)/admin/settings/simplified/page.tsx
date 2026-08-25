@@ -23,7 +23,7 @@ import Alert from '@/components/ui/Alert'
 import Container from '@/components/shared/Container'
 import { settingsService } from '@/services/api/settings.service'
 import { useSession } from 'next-auth/react'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import { formatCurrency } from '@/utils/format'
 
 // Simplified setting structure

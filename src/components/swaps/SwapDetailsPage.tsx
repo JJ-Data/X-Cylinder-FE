@@ -18,7 +18,7 @@ import Badge from '@/components/ui/Badge'
 import Alert from '@/components/ui/Alert'
 import { useSwap, useSwapReceipt, useMarkReceiptPrinted } from '@/hooks/useSwap'
 import { format } from 'date-fns'
-import { toast } from 'sonner'
+import { toast } from '@/utils/toast-adapter'
 
 const conditionColors = {
   good: 'green',

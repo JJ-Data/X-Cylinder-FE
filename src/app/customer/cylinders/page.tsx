@@ -1,28 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useCustomerActiveLeases } from '@/hooks/useLeases'
-import { useCurrentCustomerId } from '@/hooks/useCurrentCustomer'
+import { useMyCustomerDashboard } from '@/hooks/useCustomerSelf'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
 import { formatDate } from '@/utils/format'
 import { LeaseStatus } from '@/types/cylinder'
 
 export default function CustomerCylindersPage() {
-    const {
-        customerId,
-        isLoading: customerLoading,
-        error: customerError,
-    } = useCurrentCustomerId()
+    const { data: dashboard, error, isLoading } = useMyCustomerDashboard()
 
-    const {
-        data: activeLeases,
-        error: leaseError,
-        isLoading: leaseLoading,
-    } = useCustomerActiveLeases(customerId)
-
-    const isLoading = customerLoading || leaseLoading
-    const error = customerError || leaseError
+    const activeLeases: any[] =
+        dashboard?.activeLeases || dashboard?.leases?.active || []
 
     return (
         <div className="container mx-auto px-4 py-8">

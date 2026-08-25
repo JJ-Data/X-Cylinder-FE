@@ -20,7 +20,7 @@ import { useCylinders } from '@/hooks/useCylinders'
 import { useLeaseMutations } from '@/hooks/useLeases'
 import { formatCurrency } from '@/utils/formatCurrency'
 import { handleBackendValidationErrors } from '@/utils/errorHandler'
-import { toast } from 'sonner'
+import { toast } from '@/utils/toast-adapter'
 import type { ZodType } from 'zod'
 import type { Customer } from '@/types/customer'
 

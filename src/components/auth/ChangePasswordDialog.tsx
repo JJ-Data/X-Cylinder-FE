@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button'
 import { FormItem, Form } from '@/components/ui/Form'
 import PasswordInput from '@/components/shared/PasswordInput'
 import { userService } from '@/services/api/user.service'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import { PiLockDuotone } from 'react-icons/pi'
 
 interface ChangePasswordDialogProps {

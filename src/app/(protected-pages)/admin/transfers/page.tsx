@@ -19,7 +19,7 @@ import {
 import TransferHistoryFilters from '@/components/transfers/TransferHistoryFilters'
 import TransferDetailsModal from '@/components/transfers/TransferDetailsModal'
 import { formatDate } from '@/utils/formatDate'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import { transferService } from '@/services/api/transfer.service'
 import type { Transfer, TransferFilters } from '@/types/transfer'
 

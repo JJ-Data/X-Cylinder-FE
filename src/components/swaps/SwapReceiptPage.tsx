@@ -12,7 +12,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { useSwapReceipt, useMarkReceiptPrinted } from '@/hooks/useSwap'
 import { format } from 'date-fns'
-import { toast } from 'sonner'
+import { toast } from '@/utils/toast-adapter'
 
 interface SwapReceiptPageProps {
   swapId: number

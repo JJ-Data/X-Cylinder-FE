@@ -2,11 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useAuthStore } from '@/stores'
-import {
-    useCustomerActiveLeases,
-    useCustomerLeaseHistory,
-} from '@/hooks/useLeases'
-import { useCurrentCustomerId } from '@/hooks/useCurrentCustomer'
+import { useMyCustomerDashboard } from '@/hooks/useCustomerSelf'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
 import { formatCurrency, formatDate } from '@/utils/format'
@@ -17,42 +13,31 @@ export default function CustomerDashboard() {
     const { data: session } = useSession()
     const { activeRole } = useAuthStore()
 
-    // Fetch customer-specific data
     const {
-        customerId,
-        isLoading: customerLoading,
-        error: customerError,
-    } = useCurrentCustomerId()
-    const {
-        data: activeLeases,
-        error: leaseError,
-        isLoading: leaseLoading,
-    } = useCustomerActiveLeases(customerId)
-    const {
-        data: leaseHistory,
-        error: historyError,
-        isLoading: historyLoading,
-    } = useCustomerLeaseHistory(customerId)
+        data: dashboard,
+        error,
+        isLoading,
+    } = useMyCustomerDashboard()
 
-    const isLoading = customerLoading || leaseLoading || historyLoading
-    const noCustomerProfile =
-        !customerLoading && !customerId && !customerError
-    const hasError = customerError || leaseError || historyError
-
-    // Calculate metrics
-    const activeLeasesCount = activeLeases?.length || 0
-    const totalSpent =
-        leaseHistory?.reduce(
-            (sum, lease) =>
-                sum +
-                parseFloat(lease.leaseAmount || '0') +
-                parseFloat(lease.depositAmount || '0'),
-            0,
-        ) || 0
+    // Best-guess field mapping against this backend's usual dashboard shape
+    // (see /analytics/dashboard's DashboardMetrics) - the raw response is
+    // dumped in the Debug Info panel below so field names can be corrected
+    // in one look if they don't match what GET /customers/me/dashboard
+    // actually returns.
+    const activeLeases: any[] =
+        dashboard?.activeLeases || dashboard?.leases?.active || []
+    const activeLeasesCount =
+        dashboard?.summary?.activeLeases ??
+        dashboard?.activeLeasesCount ??
+        activeLeases.length
     const overdueCount =
-        activeLeases?.filter(
+        dashboard?.summary?.overdueLeases ??
+        dashboard?.overdueCount ??
+        activeLeases.filter(
             (lease) => lease.leaseStatus === LeaseStatus.OVERDUE,
-        ).length || 0
+        ).length
+    const totalSpent =
+        dashboard?.summary?.totalSpent ?? dashboard?.totalSpent ?? 0
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -66,15 +51,9 @@ export default function CustomerDashboard() {
             </div>
 
             {/* Error State */}
-            {hasError && (
+            {error && (
                 <Alert type="danger" className="mb-6">
                     Failed to load dashboard data. Please try again later.
-                </Alert>
-            )}
-            {noCustomerProfile && (
-                <Alert type="warning" className="mb-6">
-                    We couldn&apos;t find a customer profile linked to your
-                    account. Please contact support.
                 </Alert>
             )}
 
@@ -260,6 +239,14 @@ export default function CustomerDashboard() {
                 <p className="text-xs text-gray-600">
                     User Role: {session?.user?.role}
                 </p>
+                <details className="mt-2">
+                    <summary className="text-xs text-gray-600 cursor-pointer">
+                        Raw /customers/me/dashboard response
+                    </summary>
+                    <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all mt-1">
+                        {JSON.stringify(dashboard, null, 2)}
+                    </pre>
+                </details>
             </div>
         </div>
     )

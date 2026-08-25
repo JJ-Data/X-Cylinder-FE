@@ -118,6 +118,17 @@ const getNestedValue = (obj: any, path: string): any => {
   return path.split('.').reduce((current, key) => current?.[key], obj)
 }
 
+// Prevent CSV/Excel formula injection (CWE-1236): a cell starting with =, +, -,
+// or @ gets interpreted as a live formula by Excel/Sheets when opened, not as
+// text. Any exported field sourced from user input (names, notes, addresses)
+// could carry one, so force it to render as plain text with a leading quote.
+const sanitizeForCsv = (value: string): string => {
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `'${value}`
+  }
+  return value
+}
+
 // Format data for export
 const formatDataForExport = (data: any[], columns: ExportColumn[]): any[][] => {
   return data.map(row => 
@@ -146,7 +157,7 @@ export const exportToCSV = (config: CSVExportConfig): void => {
   const rows = formatDataForExport(data, columns)
     .map(row => row.map(cell => {
       // Escape and quote cells containing commas, quotes, or newlines
-      const cellStr = cell.toString()
+      const cellStr = sanitizeForCsv(cell.toString())
       if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
         return `"${cellStr.replace(/"/g, '""')}"`
       }

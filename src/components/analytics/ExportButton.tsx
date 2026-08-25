@@ -9,7 +9,7 @@ import {
   PiFileXlsDuotone,
   PiFilePdfDuotone
 } from 'react-icons/pi'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 
 export type ExportFormat = 'csv' | 'excel' | 'pdf'
 

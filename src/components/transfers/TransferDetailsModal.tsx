@@ -19,7 +19,7 @@ import {
   PiNoteDuotone
 } from 'react-icons/pi'
 import { formatDate } from '@/utils/formatDate'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import { transferService } from '@/services/api/transfer.service'
 import type { Transfer } from '@/types/transfer'
 

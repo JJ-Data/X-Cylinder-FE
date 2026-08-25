@@ -1,26 +1,18 @@
 'use client'
 
-import { useCustomerTransactions } from '@/hooks/useCustomers'
-import { useCurrentCustomerId } from '@/hooks/useCurrentCustomer'
+import { useMyCustomerHistory } from '@/hooks/useCustomerSelf'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
 import { formatDate, formatCurrency } from '@/utils/format'
 
 export default function CustomerTransactionsPage() {
-    const {
-        customerId,
-        isLoading: customerLoading,
-        error: customerError,
-    } = useCurrentCustomerId()
+    const { data: history, error, isLoading } = useMyCustomerHistory()
 
-    const {
-        data: transactions,
-        error: transactionsError,
-        isLoading: transactionsLoading,
-    } = useCustomerTransactions(customerId)
-
-    const isLoading = customerLoading || transactionsLoading
-    const error = customerError || transactionsError
+    // Best-guess shape - GET /customers/me/history might return a bare array
+    // or a wrapped object. Falls back to [] either way.
+    const transactions: any[] = Array.isArray(history)
+        ? history
+        : history?.transactions || []
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -104,6 +96,15 @@ export default function CustomerTransactionsPage() {
                     </div>
                 </div>
             )}
+
+            <details className="mt-6 bg-gray-50 rounded-lg p-4">
+                <summary className="text-xs text-gray-600 cursor-pointer">
+                    Debug: raw /customers/me/history response
+                </summary>
+                <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all mt-1">
+                    {JSON.stringify(history, null, 2)}
+                </pre>
+            </details>
         </div>
     )
 }

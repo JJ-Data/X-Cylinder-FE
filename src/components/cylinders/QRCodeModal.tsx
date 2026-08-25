@@ -9,7 +9,7 @@ import {
     PiCopyDuotone,
 } from 'react-icons/pi'
 import Button from '@/components/ui/Button'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 
 // New simplified interface for the modal
 interface QRCodeModalProps {

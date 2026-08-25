@@ -8,7 +8,8 @@ import {
   PiFileCsvDuotone,
   PiFilePdfDuotone
 } from 'react-icons/pi'
-import { toast } from 'react-hot-toast'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
 import { exportTable, ExportColumn, ExportFormat } from '@/utils/export.utils'
 
 export interface TableExportButtonProps {
@@ -61,14 +62,18 @@ export default function TableExportButton({
   const handleExport = async (format: ExportFormat) => {
     // Check if there's data to export
     if (!data || data.length === 0) {
-      toast.error('No data available to export')
+      toast.push(
+        <Notification title="Error" type="danger">
+          No data available to export
+        </Notification>,
+      )
       return
     }
 
     try {
       setIsExporting(true)
       onExportStart?.()
-      
+
       // Perform export
       exportTable({
         data,
@@ -78,12 +83,20 @@ export default function TableExportButton({
         title,
         orientation: format === 'pdf' ? orientation : undefined
       })
-      
-      toast.success(`Successfully exported ${data.length} records as ${format.toUpperCase()}`)
+
+      toast.push(
+        <Notification title="Success" type="success">
+          {`Successfully exported ${data.length} records as ${format.toUpperCase()}`}
+        </Notification>,
+      )
       onExportComplete?.()
     } catch (error) {
       const err = error as Error
-      toast.error(err.message || 'Failed to export data')
+      toast.push(
+        <Notification title="Error" type="danger">
+          {err.message || 'Failed to export data'}
+        </Notification>,
+      )
       console.error('Export error:', error)
       onExportError?.(err)
     } finally {

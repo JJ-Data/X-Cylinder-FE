@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import QRScanner from '@/components/shared/QRScanner'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 
 export default function ScanCylinderPage() {
     const router = useRouter()

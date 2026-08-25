@@ -6,7 +6,7 @@ import QRScanner from '@/components/shared/QRScanner'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import { useCylinderByCode } from '@/hooks/useCylinders'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import type { Cylinder } from '@/types/cylinder'
 
 interface CylinderQRScannerProps {

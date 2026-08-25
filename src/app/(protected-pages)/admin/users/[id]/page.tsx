@@ -43,7 +43,7 @@ import {
 import { UserRole, PaymentStatus } from '@/types/user'
 import { useSession } from 'next-auth/react'
 import {} from '@/types/user'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
 
 export default function UserDetailPage() {

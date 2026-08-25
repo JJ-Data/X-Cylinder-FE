@@ -17,7 +17,7 @@ import { Card } from '@/components/ui'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { formatDate, formatCurrency } from '@/utils/format'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/utils/toast-adapter'
 import type { LeaseRecord } from '@/types/cylinder'
 
 type ConditionType = 'good' | 'damaged' | 'needs_inspection'
