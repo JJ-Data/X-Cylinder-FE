@@ -1,7 +1,6 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useAuthStore } from '@/stores'
 import { useMyCustomerDashboard } from '@/hooks/useCustomerSelf'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Alert } from '@/components/ui/Alert'
@@ -11,7 +10,6 @@ import { LeaseStatus } from '@/types/cylinder'
 
 export default function CustomerDashboard() {
     const { data: session } = useSession()
-    const { activeRole } = useAuthStore()
 
     const {
         data: dashboard,
@@ -19,25 +17,10 @@ export default function CustomerDashboard() {
         isLoading,
     } = useMyCustomerDashboard()
 
-    // Best-guess field mapping against this backend's usual dashboard shape
-    // (see /analytics/dashboard's DashboardMetrics) - the raw response is
-    // dumped in the Debug Info panel below so field names can be corrected
-    // in one look if they don't match what GET /customers/me/dashboard
-    // actually returns.
-    const activeLeases: any[] =
-        dashboard?.activeLeases || dashboard?.leases?.active || []
-    const activeLeasesCount =
-        dashboard?.summary?.activeLeases ??
-        dashboard?.activeLeasesCount ??
-        activeLeases.length
-    const overdueCount =
-        dashboard?.summary?.overdueLeases ??
-        dashboard?.overdueCount ??
-        activeLeases.filter(
-            (lease) => lease.leaseStatus === LeaseStatus.OVERDUE,
-        ).length
-    const totalSpent =
-        dashboard?.summary?.totalSpent ?? dashboard?.totalSpent ?? 0
+    const activeLeases: any[] = dashboard?.activeLeaseDetails || []
+    const activeLeasesCount = dashboard?.summary?.activeLeases ?? 0
+    const overdueCount = dashboard?.summary?.overdueLeases ?? 0
+    const totalSpent = dashboard?.summary?.totalSpent ?? 0
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -223,30 +206,6 @@ export default function CustomerDashboard() {
                         </div>
                     )}
                 </div>
-            </div>
-
-            {/* Debug Info */}
-            <div className="mt-8 bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Debug Info:
-                </h4>
-                <p className="text-xs text-gray-600">
-                    Active Role: {activeRole}
-                </p>
-                <p className="text-xs text-gray-600">
-                    User ID: {session?.user?.id}
-                </p>
-                <p className="text-xs text-gray-600">
-                    User Role: {session?.user?.role}
-                </p>
-                <details className="mt-2">
-                    <summary className="text-xs text-gray-600 cursor-pointer">
-                        Raw /customers/me/dashboard response
-                    </summary>
-                    <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all mt-1">
-                        {JSON.stringify(dashboard, null, 2)}
-                    </pre>
-                </details>
             </div>
         </div>
     )

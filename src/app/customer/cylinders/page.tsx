@@ -10,8 +10,7 @@ import { LeaseStatus } from '@/types/cylinder'
 export default function CustomerCylindersPage() {
     const { data: dashboard, error, isLoading } = useMyCustomerDashboard()
 
-    const activeLeases: any[] =
-        dashboard?.activeLeases || dashboard?.leases?.active || []
+    const activeLeases: any[] = dashboard?.activeLeaseDetails || []
 
     return (
         <div className="container mx-auto px-4 py-8">
