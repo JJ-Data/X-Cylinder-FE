@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import useDashboardPath from '@/utils/hooks/useDashboardPath'
 import Logo from '@/components/template/Logo'
 import Menu from '@/components/ui/Menu'
 import AuthorityCheck from '@/components/shared/AuthorityCheck'
@@ -7,7 +8,7 @@ import {
     HEADER_HEIGHT,
 } from '@/constants/theme.constant'
 import { NAV_ITEM_TYPE_ITEM } from '@/constants/navigation.constant'
-import appConfig from '@/configs/app.config'
+// import appConfig from '@/configs/app.config'
 import navigationIcon from '@/configs/navigation-icon.config'
 import useMenuActive from '@/utils/hooks/useMenuActive'
 import isEmpty from 'lodash/isEmpty'
@@ -41,6 +42,8 @@ interface StackedSideNavMiniProps extends CommonProps {
 }
 
 const StackedSideNavMini = (props: StackedSideNavMiniProps) => {
+    const dashboardPath = useDashboardPath()
+
     const {
         onChange,
         routeKey,
@@ -100,7 +103,7 @@ const StackedSideNavMini = (props: StackedSideNavMiniProps) => {
     return (
         <div {...rest}>
             <Link
-                href={appConfig.authenticatedEntryPath}
+                href={dashboardPath}
                 className="stacked-mini-nav-header flex items-center justify-center"
                 style={{ height: HEADER_HEIGHT }}
             >
@@ -140,7 +143,10 @@ const StackedSideNavMini = (props: StackedSideNavMiniProps) => {
                                         }
                                     >
                                         <div className="text-2xl">
-                                            {typeof nav.icon === 'string' && navigationIcon[nav.icon as keyof typeof navigationIcon]}
+                                            {typeof nav.icon === 'string' &&
+                                                navigationIcon[
+                                                    nav.icon as keyof typeof navigationIcon
+                                                ]}
                                         </div>
                                     </Menu.MenuItem>
                                 ) : (
@@ -158,7 +164,10 @@ const StackedSideNavMini = (props: StackedSideNavMiniProps) => {
                                             className="mb-2"
                                         >
                                             <div className="text-2xl">
-                                                {typeof nav.icon === 'string' && navigationIcon[nav.icon as keyof typeof navigationIcon]}
+                                                {typeof nav.icon === 'string' &&
+                                                    navigationIcon[
+                                                        nav.icon as keyof typeof navigationIcon
+                                                    ]}
                                             </div>
                                         </Menu.MenuItem>
                                     </Link>

@@ -1,5 +1,5 @@
 'use client'
-
+import useDashboardPath from '@/utils/hooks/useDashboardPath'
 import classNames from '@/utils/classNames'
 import Logo from '@/components/template/Logo'
 import VerticalMenuContent from '@/components/template/VerticalMenuContent'
@@ -58,6 +58,7 @@ const SideNav = ({
 
     const currentRouteKey = route?.key || ''
     const { session } = useCurrentSession()
+    const dashboardPath = useDashboardPath()
 
     return (
         <div
@@ -70,7 +71,8 @@ const SideNav = ({
             )}
         >
             <Link
-                href={appConfig.authenticatedEntryPath}
+                // href={appConfig.authenticatedEntryPath}
+                href={dashboardPath}
                 className="side-nav-header flex flex-col justify-center"
                 style={{ height: HEADER_HEIGHT }}
             >
@@ -94,7 +96,11 @@ const SideNav = ({
                         routeKey={currentRouteKey}
                         direction={direction}
                         translationSetup={translationSetup}
-                        userAuthority={session?.user && 'authority' in session.user ? session.user.authority : []}
+                        userAuthority={
+                            session?.user && 'authority' in session.user
+                                ? session.user.authority
+                                : []
+                        }
                     />
                 </div>
             </div>
