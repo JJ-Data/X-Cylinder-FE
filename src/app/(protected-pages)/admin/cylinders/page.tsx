@@ -23,7 +23,7 @@ import {
     PiBuildingsDuotone,
     PiCalendarDuotone,
 } from 'react-icons/pi'
-import { useCylinders } from '@/hooks/useCylinders'
+import { useCylinders, useCylinderCounts } from '@/hooks/useCylinders'
 import DataTable from '@/components/shared/DataTable'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
@@ -118,15 +118,22 @@ export default function CylindersPage() {
     const { data, error, isLoading } = useCylinders(filters)
 
     // Calculate statistics
+    // Statistics come from true totals, not the visible page
+    const { data: counts } = useCylinderCounts()
     const cylinders = data?.data || []
-    const total = data?.meta?.total || 0
-    const availableCount = cylinders.filter(
-        (c) => c.status === 'available',
-    ).length
-    const leasedCount = cylinders.filter((c) => c.status === 'leased').length
-    const maintenanceCount = cylinders.filter(
-        (c) => c.status === 'maintenance' || c.status === 'damaged',
-    ).length
+    const total = counts?.total ?? 0
+    const availableCount = counts?.available ?? 0
+    const leasedCount = counts?.leased ?? 0
+    const maintenanceCount = counts?.maintenance ?? 0
+    // const cylinders = data?.data || []
+    // const total = data?.meta?.total || 0
+    // const availableCount = cylinders.filter(
+    //     (c) => c.status === 'available',
+    // ).length
+    // const leasedCount = cylinders.filter((c) => c.status === 'leased').length
+    // const maintenanceCount = cylinders.filter(
+    //     (c) => c.status === 'maintenance' || c.status === 'damaged',
+    // ).length
 
     const columns: ColumnDef<Cylinder>[] = [
         {
@@ -624,12 +631,10 @@ export default function CylindersPage() {
                         loading={isLoading}
                         pagingData={{
                             total: data?.meta?.total || 0,
-                            pageIndex: page,  // Pass 1-based directly - DataTable uses 1-based
+                            pageIndex: page, // Pass 1-based directly - DataTable uses 1-based
                             pageSize: pageSize,
                         }}
-                        onPaginationChange={(page) =>
-                            setPage(page)
-                        }
+                        onPaginationChange={(page) => setPage(page)}
                         onSelectChange={setPageSize}
                         noData={!isLoading && cylinders.length === 0}
                     />
