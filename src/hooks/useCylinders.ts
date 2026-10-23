@@ -134,8 +134,8 @@ export const useCylinderCounts = (outletId?: number) => {
           count('available'),
           count('leased'),
           count('refilling'),
-          count('in_refill'),
-          count('maintenance'),
+          Promise.resolve(0),
+          Promise.resolve(0),
           count('damaged'),
         ])
 
