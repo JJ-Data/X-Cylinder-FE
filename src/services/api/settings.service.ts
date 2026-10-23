@@ -399,7 +399,7 @@ class SettingsService {
         }
         
         // Determine operation type based on setting key
-        let operationType = 'GENERAL' // Default to GENERAL for tax, late fees, business settings, etc.
+        let operationType: string | null = null // General settings (tax, late fees) have no operation type
         if (update.key.startsWith('lease.') || update.key.startsWith('return.')) {
           operationType = 'LEASE'
         } else if (update.key.startsWith('refill.')) {
@@ -407,7 +407,6 @@ class SettingsService {
         } else if (update.key.startsWith('swap.')) {
           operationType = 'SWAP'
         }
-        // For general settings (tax, late fees, business settings), operationType is GENERAL
         
         // JSON stringify the value for backend storage
         const serializedValue = JSON.stringify(update.value)
@@ -417,9 +416,7 @@ class SettingsService {
           value: serializedValue,
           categoryId: categoryId,
           dataType: update.dataType || 'STRING',
-          scope: {
-            operationType: operationType
-          }
+          scope: operationType ? { operationType } : {}
         })
       }
       return {
