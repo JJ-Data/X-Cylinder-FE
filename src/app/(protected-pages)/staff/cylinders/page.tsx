@@ -1,6 +1,12 @@
 'use client'
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import React, {
+    useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    Suspense,
+} from 'react'
 import { Card } from '@/components/ui'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -54,7 +60,8 @@ import {
 import { CylinderFilters, type CylinderStatus } from '@/components/cylinders'
 import { useAuthStore } from '@/stores'
 import { useCylinders } from '@/hooks/useCylinders'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from '@/utils/toast-adapter'
 import type { Cylinder, CylinderType } from '@/types/cylinder'
@@ -157,19 +164,30 @@ const getTypeColor = (type: string) => {
     if (weight <= 25) return 'text-amber-700 bg-amber-50 border-amber-200'
     return 'text-red-700 bg-red-50 border-red-200'
 }
+const URL_STATUS_FILTERS = ['available', 'leased', 'maintenance']
 
-export default function StaffCylindersPage() {
+const parseStatusParam = (value: string | null): CylinderStatus | undefined => {
+    const normalized = value?.toLowerCase()
+    return normalized && URL_STATUS_FILTERS.includes(normalized)
+        ? (normalized as CylinderStatus)
+        : undefined
+}
+
+function StaffCylindersContent() {
     const router = useRouter()
     const { outletId } = useAuthStore()
+    const searchParams = useSearchParams()
     const [filters, setFilters] = useState<FilterState>({
-        status: undefined,
+        status: parseStatusParam(searchParams.get('status')),
         type: undefined,
         searchTerm: '',
     })
     const [selectedRows, setSelectedRows] = useState<number[]>([])
     const [expandedRows, setExpandedRows] = useState<number[]>([])
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-    const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null)
+    const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
+        null,
+    )
     const [showNotifications, setShowNotifications] = useState(false)
     const [showColumnSettings, setShowColumnSettings] = useState(false)
     const [visibleColumns, setVisibleColumns] = useState<string[]>([
@@ -186,7 +204,19 @@ export default function StaffCylindersPage() {
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(25)
 
+    // Keep the filter in sync when the sidebar sub-tab changes the URL
+    const statusParam = searchParams.get('status')
+    useEffect(() => {
+        setFilters((prev) => ({
+            ...prev,
+            status: parseStatusParam(statusParam),
+        }))
+        setPage(1)
+        setActiveQuickFilter(null)
+    }, [statusParam])
+
     // Fetch cylinders for the staff's outlet
+
     const {
         data: cylindersData,
         error,
@@ -205,11 +235,17 @@ export default function StaffCylindersPage() {
 
     // Calculate statistics with trends
     const stats = useMemo(() => {
-        const available = cylinders.filter(c => c.status === 'available').length
-        const leased = cylinders.filter(c => c.status === 'leased').length
-        const refilling = cylinders.filter(c => c.status === 'refilling' || c.status === 'in_refill').length
-        const maintenance = cylinders.filter(c => c.status === 'maintenance' || c.status === 'damaged').length
-        
+        const available = cylinders.filter(
+            (c) => c.status === 'available',
+        ).length
+        const leased = cylinders.filter((c) => c.status === 'leased').length
+        const refilling = cylinders.filter(
+            (c) => c.status === 'refilling' || c.status === 'in_refill',
+        ).length
+        const maintenance = cylinders.filter(
+            (c) => c.status === 'maintenance' || c.status === 'damaged',
+        ).length
+
         return {
             total: {
                 value: cylinders.length,
@@ -218,25 +254,33 @@ export default function StaffCylindersPage() {
             },
             available: {
                 value: available,
-                percentage: cylinders.length ? (available / cylinders.length * 100) : 0,
+                percentage: cylinders.length
+                    ? (available / cylinders.length) * 100
+                    : 0,
                 trend: 5,
                 trendDirection: 'up' as 'up' | 'down',
             },
             leased: {
                 value: leased,
-                percentage: cylinders.length ? (leased / cylinders.length * 100) : 0,
+                percentage: cylinders.length
+                    ? (leased / cylinders.length) * 100
+                    : 0,
                 trend: 8,
                 trendDirection: 'up' as 'up' | 'down',
             },
             refilling: {
                 value: refilling,
-                percentage: cylinders.length ? (refilling / cylinders.length * 100) : 0,
+                percentage: cylinders.length
+                    ? (refilling / cylinders.length) * 100
+                    : 0,
                 trend: 3,
                 trendDirection: 'down' as 'up' | 'down',
             },
             maintenance: {
                 value: maintenance,
-                percentage: cylinders.length ? (maintenance / cylinders.length * 100) : 0,
+                percentage: cylinders.length
+                    ? (maintenance / cylinders.length) * 100
+                    : 0,
                 trend: 2,
                 trendDirection: 'down' as 'up' | 'down',
             },
@@ -244,228 +288,262 @@ export default function StaffCylindersPage() {
     }, [cylinders])
 
     // Column definitions for DataTable
-    const columns: ColumnDef<Cylinder>[] = useMemo(() => [
-        {
-            id: 'expand',
-            header: '',
-            cell: ({ row }) => (
-                <button
-                    onClick={() => {
-                        const id = row.original.id
-                        setExpandedRows(prev =>
-                            prev.includes(id)
-                                ? prev.filter(rowId => rowId !== id)
-                                : [...prev, id]
-                        )
-                    }}
-                    className="p-0.5 hover:bg-gray-50 rounded"
-                >
-                    {expandedRows.includes(row.original.id) ? (
-                        <PiCaretDownIcon className="h-3 w-3 text-gray-500" />
-                    ) : (
-                        <PiCaretRightDuotone className="h-3 w-3 text-gray-500" />
-                    )}
-                </button>
-            ),
-            enableSorting: false,
-            enableHiding: false,
-            size: 30,
-        },
-        {
-            accessorKey: 'cylinderCode',
-            header: 'Cylinder',
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <div className="font-medium text-gray-900">
-                        {row.original.code || row.original.cylinderCode || `CYL-${row.original.id}`}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                        {row.original.qrCode}
-                    </div>
-                </div>
-            ),
-            size: 150,
-        },
-        {
-            accessorKey: 'type',
-            header: 'Type',
-            cell: ({ row }) => (
-                <div className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getTypeColor(row.original.type)}`}>
-                    {row.original.type}
-                </div>
-            ),
-            size: 100,
-        },
-        {
-            accessorKey: 'status',
-            header: 'Status',
-            cell: ({ row }) => (
-                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(row.original.status)}`}>
-                    {getStatusIcon(row.original.status)}
-                    <span className="capitalize">
-                        {row.original.status?.replace('_', ' ')}
-                    </span>
-                </div>
-            ),
-            size: 140,
-        },
-        {
-            id: 'gasLevel',
-            accessorKey: 'currentGasVolume',
-            header: 'Gas Level',
-            cell: ({ row }) => {
-                const current = parseFloat(row.original.currentGasVolume || '0')
-                const max = parseFloat(row.original.maxGasVolume || '100')
-                const percentage = max > 0 ? (current / max) * 100 : 0
-                
-                return (
-                    <div className="flex items-center gap-2">
-                        <VolumeGaugeMini current={current} max={max} />
-                        <div className="text-xs">
-                            <div className="font-medium">{percentage.toFixed(0)}%</div>
-                        </div>
-                    </div>
-                )
-            },
-            size: 100,
-        },
-        {
-            id: 'currentOutlet',
-            accessorKey: 'currentOutlet.name',
-            header: 'Outlet',
-            cell: ({ row }) => (
-                <div className="flex items-center gap-2 text-sm">
-                    <PiStorefrontDuotone className="text-gray-400" />
-                    <span>{row.original.currentOutlet?.name || 'Not assigned'}</span>
-                </div>
-            ),
-            size: 120,
-        },
-        {
-            id: 'customer',
-            header: 'Customer',
-            cell: ({ row }) => {
-                const lease = row.original.currentLease
-                if (!lease) {
-                    return <span className="text-gray-400 italic">Available</span>
-                }
-                
-                const dueDate = lease.expectedReturnDate ? new Date(lease.expectedReturnDate) : null
-                const isOverdue = dueDate && dueDate < new Date()
-                
-                return (
-                    <div className="space-y-1">
-                        <div className="font-medium text-sm">
-                            {lease.customer?.firstName} {lease.customer?.lastName}
-                        </div>
-                        {dueDate && (
-                            <div className={`text-xs flex items-center gap-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-                                {isOverdue && <PiWarningCircleDuotone />}
-                                Due: {formatDate(dueDate)}
-                            </div>
+    const columns: ColumnDef<Cylinder>[] = useMemo(
+        () => [
+            {
+                id: 'expand',
+                header: '',
+                cell: ({ row }) => (
+                    <button
+                        onClick={() => {
+                            const id = row.original.id
+                            setExpandedRows((prev) =>
+                                prev.includes(id)
+                                    ? prev.filter((rowId) => rowId !== id)
+                                    : [...prev, id],
+                            )
+                        }}
+                        className="p-0.5 hover:bg-gray-50 rounded"
+                    >
+                        {expandedRows.includes(row.original.id) ? (
+                            <PiCaretDownIcon className="h-3 w-3 text-gray-500" />
+                        ) : (
+                            <PiCaretRightDuotone className="h-3 w-3 text-gray-500" />
                         )}
-                    </div>
-                )
+                    </button>
+                ),
+                enableSorting: false,
+                enableHiding: false,
+                size: 30,
             },
-            size: 150,
-        },
-        {
-            id: 'lastInspection',
-            accessorKey: 'lastInspectionDate',
-            header: 'Last Inspection',
-            cell: ({ row }) => {
-                const date = row.original.lastInspectionDate
-                const inspectionDate = date ? new Date(date) : null
-                const daysSince = inspectionDate 
-                    ? Math.floor((Date.now() - inspectionDate.getTime()) / (1000 * 60 * 60 * 24))
-                    : null
-                
-                return (
+            {
+                accessorKey: 'cylinderCode',
+                header: 'Cylinder',
+                cell: ({ row }) => (
+                    <div className="flex flex-col">
+                        <div className="font-medium text-gray-900">
+                            {row.original.code ||
+                                row.original.cylinderCode ||
+                                `CYL-${row.original.id}`}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                            {row.original.qrCode}
+                        </div>
+                    </div>
+                ),
+                size: 150,
+            },
+            {
+                accessorKey: 'type',
+                header: 'Type',
+                cell: ({ row }) => (
+                    <div
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getTypeColor(row.original.type)}`}
+                    >
+                        {row.original.type}
+                    </div>
+                ),
+                size: 100,
+            },
+            {
+                accessorKey: 'status',
+                header: 'Status',
+                cell: ({ row }) => (
+                    <div
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border ${getStatusColor(row.original.status)}`}
+                    >
+                        {getStatusIcon(row.original.status)}
+                        <span className="capitalize">
+                            {row.original.status?.replace('_', ' ')}
+                        </span>
+                    </div>
+                ),
+                size: 140,
+            },
+            {
+                id: 'gasLevel',
+                accessorKey: 'currentGasVolume',
+                header: 'Gas Level',
+                cell: ({ row }) => {
+                    const current = parseFloat(
+                        row.original.currentGasVolume || '0',
+                    )
+                    const max = parseFloat(row.original.maxGasVolume || '100')
+                    const percentage = max > 0 ? (current / max) * 100 : 0
+
+                    return (
+                        <div className="flex items-center gap-2">
+                            <VolumeGaugeMini current={current} max={max} />
+                            <div className="text-xs">
+                                <div className="font-medium">
+                                    {percentage.toFixed(0)}%
+                                </div>
+                            </div>
+                        </div>
+                    )
+                },
+                size: 100,
+            },
+            {
+                id: 'currentOutlet',
+                accessorKey: 'currentOutlet.name',
+                header: 'Outlet',
+                cell: ({ row }) => (
                     <div className="flex items-center gap-2 text-sm">
-                        <PiCalendarDuotone className="text-gray-400" />
-                        <div>
-                            <div>{date ? formatDate(date) : 'Never'}</div>
-                            {daysSince !== null && (
-                                <div className="text-xs text-gray-500">
-                                    {daysSince} days ago
+                        <PiStorefrontDuotone className="text-gray-400" />
+                        <span>
+                            {row.original.currentOutlet?.name || 'Not assigned'}
+                        </span>
+                    </div>
+                ),
+                size: 120,
+            },
+            {
+                id: 'customer',
+                header: 'Customer',
+                cell: ({ row }) => {
+                    const lease = row.original.currentLease
+                    if (!lease) {
+                        return (
+                            <span className="text-gray-400 italic">
+                                Available
+                            </span>
+                        )
+                    }
+
+                    const dueDate = lease.expectedReturnDate
+                        ? new Date(lease.expectedReturnDate)
+                        : null
+                    const isOverdue = dueDate && dueDate < new Date()
+
+                    return (
+                        <div className="space-y-1">
+                            <div className="font-medium text-sm">
+                                {lease.customer?.firstName}{' '}
+                                {lease.customer?.lastName}
+                            </div>
+                            {dueDate && (
+                                <div
+                                    className={`text-xs flex items-center gap-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}
+                                >
+                                    {isOverdue && <PiWarningCircleDuotone />}
+                                    Due: {formatDate(dueDate)}
                                 </div>
                             )}
                         </div>
-                    </div>
-                )
+                    )
+                },
+                size: 150,
             },
-            size: 120,
-        },
-        {
-            id: 'actions',
-            header: () => <div className="text-right">Actions</div>,
-            cell: ({ row }) => (
-                <div className="flex items-center justify-end gap-0.5">
-                    <button
-                        onClick={() => router.push(`/staff/cylinders/${row.original.id}`)}
-                        className="p-1 hover:bg-gray-50 rounded text-gray-600 hover:text-gray-900"
-                        title="View Details"
-                    >
-                        <PiEyeDuotone className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                        onClick={() => handleViewQR(row.original)}
-                        className="p-1 hover:bg-gray-50 rounded text-gray-600 hover:text-gray-900"
-                        title="View QR Code"
-                    >
-                        <PiQrCodeDuotone className="h-3.5 w-3.5" />
-                    </button>
-                    <Dropdown
-                        renderTitle={
-                            <button
-                                className="p-1 hover:bg-gray-50 rounded text-gray-600 hover:text-gray-900"
-                            >
-                                <PiDotsThreeVerticalDuotone className="h-3.5 w-3.5" />
-                            </button>
-                        }
-                    >
-                        {row.original.status === 'available' && (
+            {
+                id: 'lastInspection',
+                accessorKey: 'lastInspectionDate',
+                header: 'Last Inspection',
+                cell: ({ row }) => {
+                    const date = row.original.lastInspectionDate
+                    const inspectionDate = date ? new Date(date) : null
+                    const daysSince = inspectionDate
+                        ? Math.floor(
+                              (Date.now() - inspectionDate.getTime()) /
+                                  (1000 * 60 * 60 * 24),
+                          )
+                        : null
+
+                    return (
+                        <div className="flex items-center gap-2 text-sm">
+                            <PiCalendarDuotone className="text-gray-400" />
+                            <div>
+                                <div>{date ? formatDate(date) : 'Never'}</div>
+                                {daysSince !== null && (
+                                    <div className="text-xs text-gray-500">
+                                        {daysSince} days ago
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )
+                },
+                size: 120,
+            },
+            {
+                id: 'actions',
+                header: () => <div className="text-right">Actions</div>,
+                cell: ({ row }) => (
+                    <div className="flex items-center justify-end gap-0.5">
+                        <button
+                            onClick={() =>
+                                router.push(
+                                    `/staff/cylinders/${row.original.id}`,
+                                )
+                            }
+                            className="p-1 hover:bg-gray-50 rounded text-gray-600 hover:text-gray-900"
+                            title="View Details"
+                        >
+                            <PiEyeDuotone className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                            onClick={() => handleViewQR(row.original)}
+                            className="p-1 hover:bg-gray-50 rounded text-gray-600 hover:text-gray-900"
+                            title="View QR Code"
+                        >
+                            <PiQrCodeDuotone className="h-3.5 w-3.5" />
+                        </button>
+                        <Dropdown
+                            renderTitle={
+                                <button className="p-1 hover:bg-gray-50 rounded text-gray-600 hover:text-gray-900">
+                                    <PiDotsThreeVerticalDuotone className="h-3.5 w-3.5" />
+                                </button>
+                            }
+                        >
+                            {row.original.status === 'available' && (
+                                <Dropdown.Item
+                                    eventKey="lease"
+                                    onClick={() =>
+                                        router.push(
+                                            `/staff/leasing/new?cylinderId=${row.original.id}`,
+                                        )
+                                    }
+                                >
+                                    <PiUserDuotone className="mr-2 h-3.5 w-3.5" />
+                                    Assign Lease
+                                </Dropdown.Item>
+                            )}
                             <Dropdown.Item
-                                eventKey="lease"
-                                onClick={() => router.push(`/staff/leasing/new?cylinderId=${row.original.id}`)}
+                                eventKey="transfer"
+                                onClick={() => handleTransfer(row.original)}
                             >
-                                <PiUserDuotone className="mr-2 h-3.5 w-3.5" />
-                                Assign Lease
+                                <PiArrowsLeftRightDuotone className="mr-2 h-3.5 w-3.5" />
+                                Transfer
                             </Dropdown.Item>
-                        )}
-                        <Dropdown.Item
-                            eventKey="transfer"
-                            onClick={() => handleTransfer(row.original)}
-                        >
-                            <PiArrowsLeftRightDuotone className="mr-2 h-3.5 w-3.5" />
-                            Transfer
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                            eventKey="refill"
-                            onClick={() => handleRefill(row.original)}
-                        >
-                            <PiGasPumpDuotone className="mr-2 h-3.5 w-3.5" />
-                            Record Refill
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                            eventKey="maintenance"
-                            onClick={() => handleMaintenance(row.original)}
-                        >
-                            <PiToolboxDuotone className="mr-2 h-3.5 w-3.5" />
-                            Maintenance
-                        </Dropdown.Item>
-                    </Dropdown>
-                </div>
-            ),
-            enableSorting: false,
-            size: 100,
-        },
-    ], [expandedRows, router])
+                            <Dropdown.Item
+                                eventKey="refill"
+                                onClick={() => handleRefill(row.original)}
+                            >
+                                <PiGasPumpDuotone className="mr-2 h-3.5 w-3.5" />
+                                Record Refill
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                                eventKey="maintenance"
+                                onClick={() => handleMaintenance(row.original)}
+                            >
+                                <PiToolboxDuotone className="mr-2 h-3.5 w-3.5" />
+                                Maintenance
+                            </Dropdown.Item>
+                        </Dropdown>
+                    </div>
+                ),
+                enableSorting: false,
+                size: 100,
+            },
+        ],
+        [expandedRows, router],
+    )
 
     // Filter columns based on visibility settings
-    const visibleColumnsData = useMemo(() => 
-        columns.filter(col => visibleColumns.includes(col.id as string)),
-        [columns, visibleColumns]
+    const visibleColumnsData = useMemo(
+        () =>
+            columns.filter((col) => visibleColumns.includes(col.id as string)),
+        [columns, visibleColumns],
     )
 
     // Action handlers
@@ -486,7 +564,7 @@ export default function StaffCylindersPage() {
     }, [])
 
     const handleQuickFilter = useCallback((filter: QuickFilter) => {
-        setFilters(prev => ({ ...prev, ...filter.filter }))
+        setFilters((prev) => ({ ...prev, ...filter.filter }))
         setActiveQuickFilter(filter.id)
     }, [])
 
@@ -498,9 +576,12 @@ export default function StaffCylindersPage() {
         toast(`Transfer cylinder ${cylinder.cylinderCode}`)
     }, [])
 
-    const handleRefill = useCallback((cylinder: Cylinder) => {
-        router.push(`/staff/refills/new?cylinderId=${cylinder.id}`)
-    }, [router])
+    const handleRefill = useCallback(
+        (cylinder: Cylinder) => {
+            router.push(`/staff/refills/new?cylinderId=${cylinder.id}`)
+        },
+        [router],
+    )
 
     const handleMaintenance = useCallback((cylinder: Cylinder) => {
         toast(`Maintenance for cylinder ${cylinder.cylinderCode}`)
@@ -510,31 +591,40 @@ export default function StaffCylindersPage() {
         router.push('/staff/cylinders/scan')
     }, [router])
 
-    const handleExport = useCallback(async (format: 'csv' | 'pdf' = 'csv') => {
-        try {
-            const dataToExport = selectedRows.length > 0 
-                ? cylinders.filter(c => selectedRows.includes(c.id))
-                : cylinders
-            
-            toast.success(`Exporting ${dataToExport.length} cylinders as ${format.toUpperCase()}`)
-        } catch (error) {
-            toast.error('Failed to export data')
-        }
-    }, [selectedRows, cylinders])
+    const handleExport = useCallback(
+        async (format: 'csv' | 'pdf' = 'csv') => {
+            try {
+                const dataToExport =
+                    selectedRows.length > 0
+                        ? cylinders.filter((c) => selectedRows.includes(c.id))
+                        : cylinders
+
+                toast.success(
+                    `Exporting ${dataToExport.length} cylinders as ${format.toUpperCase()}`,
+                )
+            } catch (error) {
+                toast.error('Failed to export data')
+            }
+        },
+        [selectedRows, cylinders],
+    )
 
     const handleRefresh = useCallback(() => {
         mutate()
         toast.success('Data refreshed')
     }, [mutate])
 
-    const handleBulkAction = useCallback((action: string) => {
-        if (selectedRows.length === 0) {
-            toast.error('Please select cylinders first')
-            return
-        }
-        toast.success(`${action} ${selectedRows.length} cylinders`)
-        setSelectedRows([])
-    }, [selectedRows])
+    const handleBulkAction = useCallback(
+        (action: string) => {
+            if (selectedRows.length === 0) {
+                toast.error('Please select cylinders first')
+                return
+            }
+            toast.success(`${action} ${selectedRows.length} cylinders`)
+            setSelectedRows([])
+        },
+        [selectedRows],
+    )
 
     const handlePrint = useCallback(() => {
         window.print()
@@ -575,9 +665,14 @@ export default function StaffCylindersPage() {
                         Failed to load cylinders
                     </h3>
                     <p className="text-gray-600 mb-4">
-                        {error.message || 'An error occurred while fetching cylinders'}
+                        {error.message ||
+                            'An error occurred while fetching cylinders'}
                     </p>
-                    <Button variant="solid" onClick={handleRefresh} className="bg-red-600 hover:bg-red-700">
+                    <Button
+                        variant="solid"
+                        onClick={handleRefresh}
+                        className="bg-red-600 hover:bg-red-700"
+                    >
                         <PiArrowsCounterClockwiseDuotone className="mr-2" />
                         Retry
                     </Button>
@@ -591,12 +686,17 @@ export default function StaffCylindersPage() {
             <div className="container mx-auto p-6">
                 {/* Breadcrumb */}
                 <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-                    <Link href="/staff/dashboard" className="flex items-center hover:text-gray-900 transition-colors">
+                    <Link
+                        href="/staff/dashboard"
+                        className="flex items-center hover:text-gray-900 transition-colors"
+                    >
                         <PiHouseDuotone className="mr-1" />
                         Dashboard
                     </Link>
                     <PiArrowRightDuotone className="text-gray-400" />
-                    <span className="text-gray-900 font-medium">Cylinder Inventory</span>
+                    <span className="text-gray-900 font-medium">
+                        Cylinder Inventory
+                    </span>
                 </nav>
 
                 {/* Header with Stats */}
@@ -615,7 +715,9 @@ export default function StaffCylindersPage() {
                             <Button
                                 variant="plain"
                                 size="sm"
-                                onClick={() => setShowNotifications(!showNotifications)}
+                                onClick={() =>
+                                    setShowNotifications(!showNotifications)
+                                }
                                 className="relative"
                             >
                                 <PiBellDuotone className="text-xl" />
@@ -642,14 +744,24 @@ export default function StaffCylindersPage() {
                                 <div className="p-2 bg-blue-100 rounded-lg">
                                     <PiCubeDuotone className="h-5 w-5 text-blue-600" />
                                 </div>
-                                <div className={`flex items-center text-sm ${stats.total.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {stats.total.trendDirection === 'up' ? <PiCaretUpDuotone /> : <PiCaretDownDuotone />}
+                                <div
+                                    className={`flex items-center text-sm ${stats.total.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}
+                                >
+                                    {stats.total.trendDirection === 'up' ? (
+                                        <PiCaretUpDuotone />
+                                    ) : (
+                                        <PiCaretDownDuotone />
+                                    )}
                                     {stats.total.trend}%
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <p className="text-2xl font-bold text-gray-900">{stats.total.value}</p>
-                                <p className="text-sm text-gray-600">Total Cylinders</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {stats.total.value}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    Total Cylinders
+                                </p>
                             </div>
                         </Card>
 
@@ -659,18 +771,30 @@ export default function StaffCylindersPage() {
                                 <div className="p-2 bg-emerald-100 rounded-lg">
                                     <PiCheckCircleDuotone className="h-5 w-5 text-emerald-600" />
                                 </div>
-                                <div className={`flex items-center text-sm ${stats.available.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {stats.available.trendDirection === 'up' ? <PiCaretUpDuotone /> : <PiCaretDownDuotone />}
+                                <div
+                                    className={`flex items-center text-sm ${stats.available.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}
+                                >
+                                    {stats.available.trendDirection === 'up' ? (
+                                        <PiCaretUpDuotone />
+                                    ) : (
+                                        <PiCaretDownDuotone />
+                                    )}
                                     {stats.available.trend}%
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <p className="text-2xl font-bold text-gray-900">{stats.available.value}</p>
-                                <p className="text-sm text-gray-600">Available</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {stats.available.value}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    Available
+                                </p>
                                 <div className="mt-2 h-2 bg-emerald-200 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                         className="h-full bg-emerald-600 rounded-full transition-all"
-                                        style={{ width: `${stats.available.percentage}%` }}
+                                        style={{
+                                            width: `${stats.available.percentage}%`,
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -682,18 +806,28 @@ export default function StaffCylindersPage() {
                                 <div className="p-2 bg-blue-100 rounded-lg">
                                     <PiUserDuotone className="h-5 w-5 text-blue-600" />
                                 </div>
-                                <div className={`flex items-center text-sm ${stats.leased.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {stats.leased.trendDirection === 'up' ? <PiCaretUpDuotone /> : <PiCaretDownDuotone />}
+                                <div
+                                    className={`flex items-center text-sm ${stats.leased.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}
+                                >
+                                    {stats.leased.trendDirection === 'up' ? (
+                                        <PiCaretUpDuotone />
+                                    ) : (
+                                        <PiCaretDownDuotone />
+                                    )}
                                     {stats.leased.trend}%
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <p className="text-2xl font-bold text-gray-900">{stats.leased.value}</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {stats.leased.value}
+                                </p>
                                 <p className="text-sm text-gray-600">Leased</p>
                                 <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                         className="h-full bg-blue-600 rounded-full transition-all"
-                                        style={{ width: `${stats.leased.percentage}%` }}
+                                        style={{
+                                            width: `${stats.leased.percentage}%`,
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -705,18 +839,30 @@ export default function StaffCylindersPage() {
                                 <div className="p-2 bg-amber-100 rounded-lg">
                                     <PiGasPumpDuotone className="h-5 w-5 text-amber-600" />
                                 </div>
-                                <div className={`flex items-center text-sm ${stats.refilling.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {stats.refilling.trendDirection === 'up' ? <PiCaretUpDuotone /> : <PiCaretDownDuotone />}
+                                <div
+                                    className={`flex items-center text-sm ${stats.refilling.trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}
+                                >
+                                    {stats.refilling.trendDirection === 'up' ? (
+                                        <PiCaretUpDuotone />
+                                    ) : (
+                                        <PiCaretDownDuotone />
+                                    )}
                                     {stats.refilling.trend}%
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <p className="text-2xl font-bold text-gray-900">{stats.refilling.value}</p>
-                                <p className="text-sm text-gray-600">In Refill</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {stats.refilling.value}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    In Refill
+                                </p>
                                 <div className="mt-2 h-2 bg-amber-200 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                         className="h-full bg-amber-600 rounded-full transition-all"
-                                        style={{ width: `${stats.refilling.percentage}%` }}
+                                        style={{
+                                            width: `${stats.refilling.percentage}%`,
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -728,18 +874,29 @@ export default function StaffCylindersPage() {
                                 <div className="p-2 bg-orange-100 rounded-lg">
                                     <PiToolboxDuotone className="h-5 w-5 text-orange-600" />
                                 </div>
-                                <div className={`flex items-center text-sm ${stats.maintenance.trendDirection === 'up' ? 'text-red-600' : 'text-green-600'}`}>
-                                    {stats.maintenance.trendDirection === 'up' ? <PiCaretUpDuotone /> : <PiCaretDownDuotone />}
+                                <div
+                                    className={`flex items-center text-sm ${stats.maintenance.trendDirection === 'up' ? 'text-red-600' : 'text-green-600'}`}
+                                >
+                                    {stats.maintenance.trendDirection ===
+                                    'up' ? (
+                                        <PiCaretUpDuotone />
+                                    ) : (
+                                        <PiCaretDownDuotone />
+                                    )}
                                     {stats.maintenance.trend}%
                                 </div>
                             </div>
                             <div className="mt-3">
-                                <p className="text-2xl font-bold text-gray-900">{stats.maintenance.value}</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {stats.maintenance.value}
+                                </p>
                                 <p className="text-sm text-gray-600">Issues</p>
                                 <div className="mt-2 h-2 bg-orange-200 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                         className="h-full bg-orange-600 rounded-full transition-all"
-                                        style={{ width: `${stats.maintenance.percentage}%` }}
+                                        style={{
+                                            width: `${stats.maintenance.percentage}%`,
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -751,13 +908,18 @@ export default function StaffCylindersPage() {
                         {quickFilters.map((filter) => (
                             <Button
                                 key={filter.id}
-                                variant={activeQuickFilter === filter.id ? 'solid' : 'plain'}
+                                variant={
+                                    activeQuickFilter === filter.id
+                                        ? 'solid'
+                                        : 'plain'
+                                }
                                 size="sm"
                                 onClick={() => handleQuickFilter(filter)}
                                 className={`
-                                    ${activeQuickFilter === filter.id 
-                                        ? `bg-${filter.color}-600 hover:bg-${filter.color}-700 text-white` 
-                                        : `hover:bg-${filter.color}-50 text-gray-700`
+                                    ${
+                                        activeQuickFilter === filter.id
+                                            ? `bg-${filter.color}-600 hover:bg-${filter.color}-700 text-white`
+                                            : `hover:bg-${filter.color}-50 text-gray-700`
                                     } transition-all
                                 `}
                             >
@@ -777,7 +939,9 @@ export default function StaffCylindersPage() {
                                     id="cylinder-search"
                                     placeholder="Search cylinders... (Ctrl+/)"
                                     value={filters.searchTerm}
-                                    onChange={(e) => handleSearch(e.target.value)}
+                                    onChange={(e) =>
+                                        handleSearch(e.target.value)
+                                    }
                                     className="pl-12 pr-12 h-12 text-base w-full"
                                 />
                                 <PiMagnifyingGlassDuotone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -802,7 +966,9 @@ export default function StaffCylindersPage() {
                                     <Button
                                         variant="plain"
                                         size="sm"
-                                        onClick={() => handleBulkAction('transfer')}
+                                        onClick={() =>
+                                            handleBulkAction('transfer')
+                                        }
                                         className="text-blue-600"
                                     >
                                         Transfer
@@ -838,23 +1004,47 @@ export default function StaffCylindersPage() {
                                 }
                             >
                                 <div className="p-2 min-w-[200px]">
-                                    <div className="font-medium text-sm mb-2 px-2">Visible Columns</div>
-                                    {columns.filter(col => col.id !== 'expand' && col.id !== 'actions').map(col => (
-                                        <label key={col.id} className="flex items-center px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
-                                            <Checkbox
-                                                checked={visibleColumns.includes(col.id as string)}
-                                                onChange={(checked) => {
-                                                    if (checked) {
-                                                        setVisibleColumns([...visibleColumns, col.id as string])
-                                                    } else {
-                                                        setVisibleColumns(visibleColumns.filter(id => id !== col.id))
-                                                    }
-                                                }}
-                                                className="mb-0 mr-2"
-                                            />
-                                            <span className="text-sm">{col.header as string}</span>
-                                        </label>
-                                    ))}
+                                    <div className="font-medium text-sm mb-2 px-2">
+                                        Visible Columns
+                                    </div>
+                                    {columns
+                                        .filter(
+                                            (col) =>
+                                                col.id !== 'expand' &&
+                                                col.id !== 'actions',
+                                        )
+                                        .map((col) => (
+                                            <label
+                                                key={col.id}
+                                                className="flex items-center px-2 py-1 hover:bg-gray-50 rounded cursor-pointer"
+                                            >
+                                                <Checkbox
+                                                    checked={visibleColumns.includes(
+                                                        col.id as string,
+                                                    )}
+                                                    onChange={(checked) => {
+                                                        if (checked) {
+                                                            setVisibleColumns([
+                                                                ...visibleColumns,
+                                                                col.id as string,
+                                                            ])
+                                                        } else {
+                                                            setVisibleColumns(
+                                                                visibleColumns.filter(
+                                                                    (id) =>
+                                                                        id !==
+                                                                        col.id,
+                                                                ),
+                                                            )
+                                                        }
+                                                    }}
+                                                    className="mb-0 mr-2"
+                                                />
+                                                <span className="text-sm">
+                                                    {col.header as string}
+                                                </span>
+                                            </label>
+                                        ))}
                                 </div>
                             </Dropdown>
 
@@ -862,7 +1052,9 @@ export default function StaffCylindersPage() {
                             <Button
                                 variant="plain"
                                 size="sm"
-                                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                                onClick={() =>
+                                    setShowAdvancedFilters(!showAdvancedFilters)
+                                }
                                 className="relative"
                             >
                                 <PiSlidersHorizontalDuotone className="mr-2" />
@@ -893,15 +1085,24 @@ export default function StaffCylindersPage() {
                                     </Button>
                                 }
                             >
-                                <Dropdown.Item eventKey="csv" onClick={() => handleExport('csv')}>
+                                <Dropdown.Item
+                                    eventKey="csv"
+                                    onClick={() => handleExport('csv')}
+                                >
                                     <PiFileCsvDuotone className="mr-2" />
                                     Export as CSV
                                 </Dropdown.Item>
-                                <Dropdown.Item eventKey="pdf" onClick={() => handleExport('pdf')}>
+                                <Dropdown.Item
+                                    eventKey="pdf"
+                                    onClick={() => handleExport('pdf')}
+                                >
                                     <PiPrinterDuotone className="mr-2" />
                                     Export as PDF
                                 </Dropdown.Item>
-                                <Dropdown.Item eventKey="print" onClick={handlePrint}>
+                                <Dropdown.Item
+                                    eventKey="print"
+                                    onClick={handlePrint}
+                                >
                                     <PiPrinterDuotone className="mr-2" />
                                     Print
                                 </Dropdown.Item>
@@ -912,12 +1113,19 @@ export default function StaffCylindersPage() {
                     {/* Active Filters Display */}
                     {(filters.status || filters.type || activeQuickFilter) && (
                         <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                            <span className="text-sm text-gray-600">Active filters:</span>
+                            <span className="text-sm text-gray-600">
+                                Active filters:
+                            </span>
                             {filters.status && (
                                 <div className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
                                     <span>Status: {filters.status}</span>
-                                    <button 
-                                        onClick={() => setFilters(prev => ({ ...prev, status: undefined }))}
+                                    <button
+                                        onClick={() =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                status: undefined,
+                                            }))
+                                        }
                                         className="ml-1 hover:text-blue-900"
                                     >
                                         <PiXDuotone className="w-4 h-4" />
@@ -927,8 +1135,13 @@ export default function StaffCylindersPage() {
                             {filters.type && (
                                 <div className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                                     <span>Type: {filters.type}</span>
-                                    <button 
-                                        onClick={() => setFilters(prev => ({ ...prev, type: undefined }))}
+                                    <button
+                                        onClick={() =>
+                                            setFilters((prev) => ({
+                                                ...prev,
+                                                type: undefined,
+                                            }))
+                                        }
                                         className="ml-1 hover:text-green-900"
                                     >
                                         <PiXDuotone className="w-4 h-4" />
@@ -937,7 +1150,11 @@ export default function StaffCylindersPage() {
                             )}
                             <button
                                 onClick={() => {
-                                    setFilters({ status: undefined, type: undefined, searchTerm: '' })
+                                    setFilters({
+                                        status: undefined,
+                                        type: undefined,
+                                        searchTerm: '',
+                                    })
                                     setActiveQuickFilter(null)
                                 }}
                                 className="text-sm text-red-600 hover:text-red-700"
@@ -969,12 +1186,14 @@ export default function StaffCylindersPage() {
                             if (checked) {
                                 setSelectedRows([...selectedRows, row.id])
                             } else {
-                                setSelectedRows(selectedRows.filter(id => id !== row.id))
+                                setSelectedRows(
+                                    selectedRows.filter((id) => id !== row.id),
+                                )
                             }
                         }}
                         onIndeterminateCheckBoxChange={(checked, rows) => {
                             if (checked) {
-                                setSelectedRows(rows.map(r => r.original.id))
+                                setSelectedRows(rows.map((r) => r.original.id))
                             } else {
                                 setSelectedRows([])
                             }
@@ -997,11 +1216,15 @@ export default function StaffCylindersPage() {
                                     No cylinders found
                                 </h3>
                                 <p className="text-gray-600 mb-8 leading-relaxed max-w-md mx-auto">
-                                    {filters.status || filters.type || filters.searchTerm
+                                    {filters.status ||
+                                    filters.type ||
+                                    filters.searchTerm
                                         ? 'No cylinders match your current filters. Try adjusting your search criteria.'
                                         : 'No cylinders are currently assigned to your outlet.'}
                                 </p>
-                                {(filters.status || filters.type || filters.searchTerm) ? (
+                                {filters.status ||
+                                filters.type ||
+                                filters.searchTerm ? (
                                     <Button
                                         variant="solid"
                                         onClick={() => {
@@ -1032,39 +1255,62 @@ export default function StaffCylindersPage() {
                     />
 
                     {/* Expandable Row Content */}
-                    {expandedRows.map(rowId => {
-                        const cylinder = cylinders.find(c => c.id === rowId)
+                    {expandedRows.map((rowId) => {
+                        const cylinder = cylinders.find((c) => c.id === rowId)
                         if (!cylinder) return null
-                        
+
                         return (
-                            <div key={rowId} className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                            <div
+                                key={rowId}
+                                className="px-6 py-4 bg-gray-50 border-t border-gray-200"
+                            >
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 mb-2">Additional Details</h4>
+                                        <h4 className="font-semibold text-gray-900 mb-2">
+                                            Additional Details
+                                        </h4>
                                         <dl className="space-y-1 text-sm">
                                             <div className="flex justify-between">
-                                                <dt className="text-gray-600">Manufacture Date:</dt>
-                                                <dd className="font-medium">{cylinder.manufactureDate ? formatDate(cylinder.manufactureDate) : 'N/A'}</dd>
+                                                <dt className="text-gray-600">
+                                                    Manufacture Date:
+                                                </dt>
+                                                <dd className="font-medium">
+                                                    {cylinder.manufactureDate
+                                                        ? formatDate(
+                                                              cylinder.manufactureDate,
+                                                          )
+                                                        : 'N/A'}
+                                                </dd>
                                             </div>
                                         </dl>
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 mb-2">Maintenance History</h4>
+                                        <h4 className="font-semibold text-gray-900 mb-2">
+                                            Maintenance History
+                                        </h4>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex items-center gap-2">
                                                 <PiCheckDuotone className="text-green-600" />
-                                                <span>Last inspection passed</span>
+                                                <span>
+                                                    Last inspection passed
+                                                </span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <PiTimerDuotone className="text-amber-600" />
-                                                <span>Next inspection due in 30 days</span>
+                                                <span>
+                                                    Next inspection due in 30
+                                                    days
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 mb-2">Notes</h4>
+                                        <h4 className="font-semibold text-gray-900 mb-2">
+                                            Notes
+                                        </h4>
                                         <p className="text-sm text-gray-600">
-                                            {cylinder.notes || 'No notes available'}
+                                            {cylinder.notes ||
+                                                'No notes available'}
                                         </p>
                                     </div>
                                 </div>
@@ -1077,24 +1323,56 @@ export default function StaffCylindersPage() {
                 <div className="mt-8 text-center text-sm text-gray-500">
                     <span className="inline-flex items-center gap-4">
                         <span>
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl</kbd> + 
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">/</kbd> Search
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                Ctrl
+                            </kbd>{' '}
+                            +
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">
+                                /
+                            </kbd>{' '}
+                            Search
                         </span>
                         <span>
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl</kbd> + 
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">R</kbd> Refresh
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                Ctrl
+                            </kbd>{' '}
+                            +
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">
+                                R
+                            </kbd>{' '}
+                            Refresh
                         </span>
                         <span>
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl</kbd> + 
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">E</kbd> Export
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                Ctrl
+                            </kbd>{' '}
+                            +
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">
+                                E
+                            </kbd>{' '}
+                            Export
                         </span>
                         <span>
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl</kbd> + 
-                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">P</kbd> Print
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                Ctrl
+                            </kbd>{' '}
+                            +
+                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">
+                                P
+                            </kbd>{' '}
+                            Print
                         </span>
                     </span>
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function StaffCylindersPage() {
+    return (
+        <Suspense fallback={null}>
+            <StaffCylindersContent />
+        </Suspense>
     )
 }

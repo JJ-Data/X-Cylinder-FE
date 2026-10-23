@@ -41,7 +41,8 @@ import { VolumeGaugeMini } from '@/components/shared/VolumeGauge'
 import QRScanner from '@/components/shared/QRScanner'
 import { useOutlets } from '@/hooks/useOutlets'
 import { useCylinders, useCylinderMutations } from '@/hooks/useCylinders'
-import { useTransferMutations } from '@/hooks/useTransfers'
+// import { useTransferMutations } from '@/hooks/useTransfers'
+import { useBulkTransfer } from '@/hooks/useBulkTransfer'
 import useWindowSize from '@/components/ui/hooks/useWindowSize'
 import { toast } from '@/utils/toast-adapter'
 import type { Cylinder } from '@/types/cylinder'
@@ -158,7 +159,8 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
 
     const { data: outletsData, isLoading: loadingOutlets } = useOutlets()
     const { transferCylinder } = useCylinderMutations()
-    const { createTransfer } = useTransferMutations()
+    // const { createTransfer } = useTransferMutations()
+    const { run: runBulkTransfer } = useBulkTransfer()
 
     const outlets = outletsData?.outlets || []
 
@@ -300,27 +302,44 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
                             : data.reason,
                     notes: data.notes,
                 })
-            } else {
-                // For bulk transfers, create individual transfers for each cylinder
-                if (data.cylinderIds && data.cylinderIds.length > 0) {
-                    for (const cylinderId of data.cylinderIds) {
-                        await createTransfer.trigger({
-                            cylinderId,
-                            toOutletId: data.destinationOutletId,
-                            notes: `${data.reason}${data.notes ? `: ${data.notes}` : ''}`,
-                        })
-                    }
+            } else if (data.cylinderIds && data.cylinderIds.length > 0) {
+                const result = await runBulkTransfer({
+                    cylinderIds: data.cylinderIds,
+                    toOutletId: data.destinationOutletId,
+                    reason:
+                        data.reason === 'other'
+                            ? data.customReason!
+                            : data.reason,
+                    notes: data.notes,
+                })
+
+                if (result.failed.length > 0) {
+                    const codeOf = (id: number) =>
+                        cylinders.find((c) => c.id === id)?.cylinderCode ??
+                        `#${id}`
+                    setSelectedCylinders(
+                        result.failed.map((failure) => failure.cylinderId),
+                    )
+                    toast.error(
+                        `${result.succeeded.length} transferred, ${result.failed.length} failed: ` +
+                            result.failed
+                                .map(
+                                    (failure) =>
+                                        `${codeOf(failure.cylinderId)} (${failure.message})`,
+                                )
+                                .join(', '),
+                    )
+                    return
                 }
             }
 
             setShowSuccess(true)
             toast.success('Transfer completed successfully!')
-
-            setTimeout(() => {
-                router.push('/admin/cylinders')
-            }, 2000)
+            setTimeout(() => router.push('/admin/cylinders'), 2000)
         } catch (error) {
-            toast.error((error as Error).message || 'Failed to complete transfer')
+            toast.error(
+                (error as Error).message || 'Failed to complete transfer',
+            )
         } finally {
             setIsProcessing(false)
         }
@@ -719,7 +738,10 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
                                                                     : null
                                                             }
                                                             onChange={(
-                                                                option: { value: number; label: string } | null,
+                                                                option: {
+                                                                    value: number
+                                                                    label: string
+                                                                } | null,
                                                             ) => {
                                                                 field.onChange(
                                                                     option?.value ||
@@ -737,150 +759,152 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
                                     </AdaptiveCard>
 
                                     {/* Cylinder Selection */}
-                                    {watchedSourceOutlet && watchedSourceOutlet > 0 && (
-                                        <AdaptiveCard>
-                                            <div className="p-4 md:p-6">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <h4 className="text-lg font-semibold">
-                                                        Select Cylinders to
-                                                        Transfer
-                                                    </h4>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {selectedCylinders.length >
-                                                        0 && (
-                                                        <Badge
-                                                            content={`${selectedCylinders.length} selected`}
-                                                            innerClass="bg-blue-100 text-blue-700"
-                                                        />
-                                                    )}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="plain"
-                                                        onClick={
-                                                            selectAllCylinders
-                                                        }
-                                                    >
-                                                        {selectedCylinders.length ===
-                                                        filteredCylinders.length
-                                                            ? 'Deselect All'
-                                                            : 'Select All'}
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {/* Search */}
-                                            <div className="mb-4">
-                                                <Input
-                                                    placeholder="Search cylinders..."
-                                                    value={cylinderSearch}
-                                                    onChange={(e) =>
-                                                        setCylinderSearch(
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    prefix={
-                                                        <PiMagnifyingGlassDuotone className="h-4 w-4 text-gray-400" />
-                                                    }
-                                                />
-                                            </div>
-
-                                            {/* Cylinder Grid */}
-                                            {loadingCylinders ? (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    {[...Array(6)].map(
-                                                        (_, i) => (
-                                                            <Skeleton
-                                                                key={i}
-                                                                height={120}
+                                    {watchedSourceOutlet &&
+                                        watchedSourceOutlet > 0 && (
+                                            <AdaptiveCard>
+                                                <div className="p-4 md:p-6">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h4 className="text-lg font-semibold">
+                                                            Select Cylinders to
+                                                            Transfer
+                                                        </h4>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {selectedCylinders.length >
+                                                            0 && (
+                                                            <Badge
+                                                                content={`${selectedCylinders.length} selected`}
+                                                                innerClass="bg-blue-100 text-blue-700"
                                                             />
-                                                        ),
-                                                    )}
+                                                        )}
+                                                        <Button
+                                                            size="sm"
+                                                            variant="plain"
+                                                            onClick={
+                                                                selectAllCylinders
+                                                            }
+                                                        >
+                                                            {selectedCylinders.length ===
+                                                            filteredCylinders.length
+                                                                ? 'Deselect All'
+                                                                : 'Select All'}
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                            ) : filteredCylinders.length ===
-                                              0 ? (
-                                                <div className="text-center py-8 text-gray-500">
-                                                    {cylinders.length === 0
-                                                        ? 'No available cylinders in this outlet'
-                                                        : 'No cylinders match your search'}
+
+                                                {/* Search */}
+                                                <div className="mb-4">
+                                                    <Input
+                                                        placeholder="Search cylinders..."
+                                                        value={cylinderSearch}
+                                                        onChange={(e) =>
+                                                            setCylinderSearch(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        prefix={
+                                                            <PiMagnifyingGlassDuotone className="h-4 w-4 text-gray-400" />
+                                                        }
+                                                    />
                                                 </div>
-                                            ) : (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
-                                                    {filteredCylinders.map(
-                                                        (cylinder) => (
-                                                            <div
-                                                                key={
-                                                                    cylinder.id
-                                                                }
-                                                                className="relative"
-                                                            >
-                                                                <Checkbox
-                                                                    checked={selectedCylinders.includes(
-                                                                        cylinder.id,
-                                                                    )}
-                                                                    onChange={() =>
-                                                                        toggleCylinder(
-                                                                            cylinder.id,
-                                                                        )
-                                                                    }
-                                                                    className="absolute top-3 right-3 z-10"
+
+                                                {/* Cylinder Grid */}
+                                                {loadingCylinders ? (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        {[...Array(6)].map(
+                                                            (_, i) => (
+                                                                <Skeleton
+                                                                    key={i}
+                                                                    height={120}
                                                                 />
-                                                                <AdaptiveCard
-                                                                    className={`p-4 cursor-pointer transition-all ${
-                                                                        selectedCylinders.includes(
-                                                                            cylinder.id,
-                                                                        )
-                                                                            ? 'border-blue-500 bg-blue-50'
-                                                                            : 'hover:border-gray-300'
-                                                                    }`}
-                                                                    onClick={() =>
-                                                                        toggleCylinder(
-                                                                            cylinder.id,
-                                                                        )
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                ) : filteredCylinders.length ===
+                                                  0 ? (
+                                                    <div className="text-center py-8 text-gray-500">
+                                                        {cylinders.length === 0
+                                                            ? 'No available cylinders in this outlet'
+                                                            : 'No cylinders match your search'}
+                                                    </div>
+                                                ) : (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                                                        {filteredCylinders.map(
+                                                            (cylinder) => (
+                                                                <div
+                                                                    key={
+                                                                        cylinder.id
                                                                     }
+                                                                    className="relative"
                                                                 >
-                                                                    <div className="pr-8">
-                                                                        <p className="font-mono font-medium">
-                                                                            {
-                                                                                cylinder.cylinderCode
-                                                                            }
-                                                                        </p>
-                                                                        <div className="flex items-center gap-2 mt-1">
-                                                                            <Tag>
+                                                                    <Checkbox
+                                                                        checked={selectedCylinders.includes(
+                                                                            cylinder.id,
+                                                                        )}
+                                                                        onChange={() =>
+                                                                            toggleCylinder(
+                                                                                cylinder.id,
+                                                                            )
+                                                                        }
+                                                                        className="absolute top-3 right-3 z-10"
+                                                                    />
+                                                                    <AdaptiveCard
+                                                                        className={`p-4 cursor-pointer transition-all ${
+                                                                            selectedCylinders.includes(
+                                                                                cylinder.id,
+                                                                            )
+                                                                                ? 'border-blue-500 bg-blue-50'
+                                                                                : 'hover:border-gray-300'
+                                                                        }`}
+                                                                        onClick={() =>
+                                                                            toggleCylinder(
+                                                                                cylinder.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <div className="pr-8">
+                                                                            <p className="font-mono font-medium">
                                                                                 {
-                                                                                    cylinder.type
+                                                                                    cylinder.cylinderCode
                                                                                 }
-                                                                            </Tag>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between mt-2">
-                                                                            <p className="text-xs text-gray-500">
-                                                                                {
-                                                                                    cylinder.currentGasVolume
-                                                                                }
-                                                                                /
-                                                                                {
-                                                                                    cylinder.maxGasVolume
-                                                                                }{' '}
-                                                                                kg
                                                                             </p>
-                                                                            <VolumeGaugeMini
-                                                                                current={parseFloat(
-                                                                                    cylinder.currentGasVolume,
-                                                                                )}
-                                                                                max={parseFloat(
-                                                                                    cylinder.maxGasVolume,
-                                                                                )}
-                                                                            />
+                                                                            <div className="flex items-center gap-2 mt-1">
+                                                                                <Tag>
+                                                                                    {
+                                                                                        cylinder.type
+                                                                                    }
+                                                                                </Tag>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between mt-2">
+                                                                                <p className="text-xs text-gray-500">
+                                                                                    {
+                                                                                        cylinder.currentGasVolume
+                                                                                    }
+
+                                                                                    /
+                                                                                    {
+                                                                                        cylinder.maxGasVolume
+                                                                                    }{' '}
+                                                                                    kg
+                                                                                </p>
+                                                                                <VolumeGaugeMini
+                                                                                    current={parseFloat(
+                                                                                        cylinder.currentGasVolume,
+                                                                                    )}
+                                                                                    max={parseFloat(
+                                                                                        cylinder.maxGasVolume,
+                                                                                    )}
+                                                                                />
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                </AdaptiveCard>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            )}
-                                        </AdaptiveCard>
-                                    )}
+                                                                    </AdaptiveCard>
+                                                                </div>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </AdaptiveCard>
+                                        )}
                                 </div>
                             )}
                         </>
@@ -1309,19 +1333,21 @@ export function TransferWizard({ preselectedCylinderId }: TransferWizardProps) {
                                 disabled={
                                     isProcessing ||
                                     // Step 0: Transfer type selection - always enabled since we have a default
-                                    (currentStep === 0 ? false :
-                                    // Step 1: Cylinder selection
-                                    currentStep === 1 ? (
-                                        watchedTransferType === 'single' 
-                                            ? !selectedCylinder
-                                            : !watchedSourceOutlet || selectedCylinders.length === 0
-                                    ) :
-                                    // Step 2: Destination & Reason
-                                    currentStep === 2 ? (
-                                        !watchedDestinationOutlet ||
-                                        !watchedReason ||
-                                        (watchedReason === 'other' && !watch('customReason'))
-                                    ) : false)
+                                    (currentStep === 0
+                                        ? false
+                                        : // Step 1: Cylinder selection
+                                          currentStep === 1
+                                          ? watchedTransferType === 'single'
+                                              ? !selectedCylinder
+                                              : !watchedSourceOutlet ||
+                                                selectedCylinders.length === 0
+                                          : // Step 2: Destination & Reason
+                                            currentStep === 2
+                                            ? !watchedDestinationOutlet ||
+                                              !watchedReason ||
+                                              (watchedReason === 'other' &&
+                                                  !watch('customReason'))
+                                            : false)
                                 }
                             >
                                 Next
