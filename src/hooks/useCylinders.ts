@@ -101,3 +101,52 @@ export const useCylinderMutations = () => {
     transferCylinder,
   }
 }
+// True totals per status, independent of page size, search and tab filters
+export interface CylinderCounts {
+  total: number
+  available: number
+  leased: number
+  refilling: number
+  maintenance: number
+}
+
+export const useCylinderCounts = (outletId?: number) => {
+  return useSWR<CylinderCounts>(
+    ['cylinder-counts', outletId ?? 'all'],
+    async () => {
+      const count = async (status?: string) => {
+        try {
+          const res = await cylinderService.getCylinders({
+            ...(outletId ? { outletId } : {}),
+            ...(status ? { status: status as CylinderFilters['status'] } : {}),
+            page: 1,
+            limit: 1,
+          })
+          return res?.meta?.total || 0
+        } catch {
+          return 0
+        }
+      }
+
+      const [total, available, leased, refilling, inRefill, maintenance, damaged] =
+        await Promise.all([
+          count(),
+          count('available'),
+          count('leased'),
+          count('refilling'),
+          count('in_refill'),
+          count('maintenance'),
+          count('damaged'),
+        ])
+
+      return {
+        total,
+        available,
+        leased,
+        refilling: refilling + inRefill,
+        maintenance: maintenance + damaged,
+      }
+    },
+    { revalidateOnFocus: false }
+  )
+}
