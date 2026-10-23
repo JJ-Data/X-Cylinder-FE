@@ -5,7 +5,8 @@ import { onSignInWithCredentials } from '@/server/actions/auth/handleSignIn'
 import handleOauthSignIn from '@/server/actions/auth/handleOauthSignIn'
 import { REDIRECT_URL_KEY } from '@/constants/app.constant'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+// import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { getRoleBasedPath } from '@/configs/app.config'
 import { sanitizeCallbackUrl } from '@/utils/route-validation'
@@ -20,6 +21,7 @@ const SignInClient = () => {
     const { data: session, status } = useSession()
     const [isRedirecting, setIsRedirecting] = useState(false)
     const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const clearedBadSession = useRef(false)
 
     useEffect(() => {
         return () => {
@@ -29,6 +31,19 @@ const SignInClient = () => {
     const callbackUrl = searchParams.get(REDIRECT_URL_KEY)
 
     // Handle client-side redirect after authentication
+    // A session whose token refresh failed counts as signed out on the server.
+    // Clear it here, otherwise this page and the middleware redirect each other forever.
+    if (status === 'authenticated' && (session as any)?.error) {
+        if (!clearedBadSession.current) {
+            clearedBadSession.current = true
+            console.warn(
+                '[SignInClient] Session has a failed token refresh, signing out:',
+                (session as any).error,
+            )
+            signOut({ redirect: false })
+        }
+        return
+    }
     useEffect(() => {
         console.log('[SignInClient] Session status changed:', {
             status,
