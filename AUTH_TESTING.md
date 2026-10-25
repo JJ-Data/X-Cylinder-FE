@@ -26,19 +26,19 @@ npm run dev
 
 ### Admin User
 - Email: admin@cylinderx.com
-- Password: Test@123
+- Password: ask the team lead
 
 ### Staff User
 - Email: staff@cylinderx.com
-- Password: Test@123
+- Password: ask the team lead
 
 ### Operator User
 - Email: operator@cylinderx.com
-- Password: Test@123
+- Password: ask the team lead
 
 ### Customer User
 - Email: customer@cylinderx.com
-- Password: Test@123
+- Password: ask the team lead
 
 ## Testing Sign-In
 
