@@ -128,9 +128,12 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 // Update outlet context if provided
-                if (outletId && outletId !== 'undefined') {
-                    set({ outletId })
-                }
+                set({
+                    outletId:
+                        outletId && outletId !== 'undefined'
+                            ? outletId
+                            : undefined,
+                })
             },
 
             // Role utilities
