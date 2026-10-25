@@ -26,12 +26,18 @@ const SessionCacheReset = () => {
     useEffect(() => {
         if (status === 'loading') return
 
-        if (
-            previousUserId.current !== undefined &&
-            previousUserId.current !== userId
-        ) {
-            mutate(() => true, undefined, { revalidate: false })
-            queryClient.clear()
+        const prev = previousUserId.current
+        // Only reset when a signed-in user signs out or is replaced by another user.
+        // A fresh sign-in (prev null) has nothing stale to clear, and clearing
+        // then wipes the page's own in-flight fetches, leaving it blank.
+        if (prev && prev !== userId) {
+            const switching = userId !== null
+            mutate(() => true, undefined, { revalidate: switching })
+            if (switching) {
+                queryClient.resetQueries()
+            } else {
+                queryClient.clear()
+            }
             useAuthStore.getState().clearAuth()
         }
         previousUserId.current = userId
