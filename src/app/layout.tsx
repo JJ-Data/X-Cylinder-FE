@@ -6,6 +6,7 @@ import NavigationProvider from '@/components/template/Navigation/NavigationProvi
 import { getNavigation } from '@/server/actions/navigation/getNavigation'
 import { getTheme } from '@/server/actions/theme'
 import type { ReactNode } from 'react'
+import SessionCacheReset from '@/components/auth/SessionCacheReset'
 import '@/assets/styles/app.css'
 
 export const metadata = {
@@ -30,6 +31,7 @@ export default async function RootLayout({
             <body suppressHydrationWarning>
                 <AuthProvider>
                     <QueryClientProvider>
+                        <SessionCacheReset />
                         <ThemeProvider theme={theme}>
                             <NavigationProvider navigationTree={navigationTree}>
                                 {children}
