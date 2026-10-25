@@ -52,10 +52,14 @@ export const useAuthStore = create<AuthState>()(
             },
 
             setAvailableRoles: (roles: UserRole[]) => {
+                const current = get().activeRole
                 set({
                     availableRoles: roles,
-                    // Set active role to first available if not set
-                    activeRole: get().activeRole || roles[0] || null,
+                    // Keep the active role only if this user actually has it
+                    activeRole:
+                        current && roles.includes(current)
+                            ? current
+                            : roles[0] || null,
                 })
             },
 
@@ -90,24 +94,28 @@ export const useAuthStore = create<AuthState>()(
 
             syncWithSession: (sessionData) => {
                 const { authority, outletId } = sessionData
-                
+
                 if (authority && authority.length > 0) {
                     // Normalize roles - convert OPERATOR back to REFILL_OP for store compatibility
                     const normalizedRoles = authority.map((role) => {
                         if (role === 'OPERATOR') return 'REFILL_OP'
                         return role as UserRole
                     })
-                    
+
                     const currentRoles = get().availableRoles
-                    const rolesChanged = JSON.stringify(normalizedRoles.sort()) !== JSON.stringify(currentRoles.sort())
-                    
+                    const rolesChanged =
+                        JSON.stringify(normalizedRoles.sort()) !==
+                        JSON.stringify(currentRoles.sort())
+
                     if (rolesChanged) {
                         set({
                             availableRoles: normalizedRoles,
                             // Set active role if not set or if current active role is not available
-                            activeRole: get().activeRole && normalizedRoles.includes(get().activeRole!) 
-                                ? get().activeRole 
-                                : normalizedRoles[0] || null,
+                            activeRole:
+                                get().activeRole &&
+                                normalizedRoles.includes(get().activeRole!)
+                                    ? get().activeRole
+                                    : normalizedRoles[0] || null,
                             isSynced: true,
                         })
                     } else {
@@ -118,11 +126,14 @@ export const useAuthStore = create<AuthState>()(
                     // No authority but still mark as synced
                     set({ isSynced: true })
                 }
-                
+
                 // Update outlet context if provided
-                if (outletId && outletId !== 'undefined') {
-                    set({ outletId })
-                }
+                set({
+                    outletId:
+                        outletId && outletId !== 'undefined'
+                            ? outletId
+                            : undefined,
+                })
             },
 
             // Role utilities
