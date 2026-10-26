@@ -216,9 +216,9 @@ export default function RevenueAnalyticsPage() {
             },
             legend: {
               position: 'top',
-              horizontalAlign: 'right',
+              horizontalAlign: 'left',
               floating: false,
-              offsetY: -10,
+              offsetY: 0,
               width: undefined,
               markers: {
                 size: 12,
