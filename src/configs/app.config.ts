@@ -6,6 +6,9 @@ export type AppConfig = {
     activeNavTranslation: boolean
 }
 
+export const CUSTOMER_PORTAL_ENABLED =
+    process.env.NEXT_PUBLIC_ENABLE_CUSTOMER_PORTAL === 'true'
+
 const appConfig: AppConfig = {
     apiPrefix:
         process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1',
