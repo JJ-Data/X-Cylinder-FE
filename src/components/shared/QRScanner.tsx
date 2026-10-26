@@ -211,7 +211,7 @@ export default function QRScanner({
       onRequestClose={onClose}
       width={showHistoryPanel ? 800 : 600}
     >
-      <div className="flex flex-col h-[600px]">
+      <div className="flex max-h-[85vh] flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -235,18 +235,10 @@ export default function QRScanner({
                 History ({scanHistory.length})
               </Button>
             )}
-            <Button
-              variant="plain"
-              size="sm"
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <PiXDuotone className="h-5 w-5" />
-            </Button>
           </div>
         </div>
 
-        <div className="flex flex-1 gap-6">
+        <div className="flex min-h-0 flex-1 gap-6 overflow-y-auto">
           {/* Main Scanner Area */}
           <div className={`${showHistoryPanel ? 'flex-1' : 'w-full'} space-y-4`}>
             {/* Error Display */}
