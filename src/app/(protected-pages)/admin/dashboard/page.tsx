@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation'
 import { subDays, format } from 'date-fns'
 import type { ActivityItem } from '@/components/analytics/ActivityFeed'
 import { validateEnvironmentVariables } from '@/utils/validateEnv'
+import { buildRecentActivities } from '@/utils/recentActivities'
 
 export default function AdminDashboard() {
     const { data: session, status, update } = useSession()
@@ -88,51 +89,10 @@ export default function AdminDashboard() {
     }, [status, session, accessToken, tokenCheckAttempts, update])
 
     // Convert recent activity to ActivityItem format
-    const recentActivities = useMemo<ActivityItem[]>(() => {
-        const activities: ActivityItem[] = []
-        
-        // Add recent leases
-        if (metrics?.recentActivity?.leases) {
-            metrics.recentActivity.leases.forEach(lease => {
-                activities.push({
-                    id: `lease-${lease.id}`,
-                    type: 'lease',
-                    title: `New lease by ${lease.customerName}`,
-                    description: `${lease.cylinderCode} leased from ${lease.outletName}`,
-                    timestamp: lease.leaseDate,
-                    metadata: {
-                        amount: lease.amount,
-                        cylinderCode: lease.cylinderCode,
-                        customerName: lease.customerName,
-                        outletName: lease.outletName
-                    }
-                })
-            })
-        }
-        
-        // Add recent refills
-        if (metrics?.recentActivity?.refills) {
-            metrics.recentActivity.refills.forEach(refill => {
-                activities.push({
-                    id: `refill-${refill.id}`,
-                    type: 'refill',
-                    title: `Cylinder refilled by ${refill.operatorName}`,
-                    description: `${refill.cylinderCode} refilled with ${refill.volume} kg`,
-                    timestamp: refill.refillDate,
-                    metadata: {
-                        volume: refill.volume,
-                        amount: refill.cost,
-                        cylinderCode: refill.cylinderCode
-                    }
-                })
-            })
-        }
-        
-        // Sort by timestamp (newest first)
-        return activities.sort((a, b) => 
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        )
-    }, [metrics?.recentActivity])
+    const recentActivities = useMemo<ActivityItem[]>(
+        () => buildRecentActivities(metrics?.recentActivity),
+        [metrics?.recentActivity],
+    )
 
     // Prepare revenue chart data
     const revenueChartData = useMemo(() => {
