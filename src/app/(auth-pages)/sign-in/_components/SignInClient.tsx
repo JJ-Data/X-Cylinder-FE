@@ -71,7 +71,7 @@ const SignInClient = () => {
             // Customer portal is switched off: sign them out and explain.
             if (
                 !CUSTOMER_PORTAL_ENABLED &&
-                String(userRole).toLowerCase() === 'customer'
+                getRoleBasedPath(String(userRole)).startsWith('/customer')
             ) {
                 signOut({ redirect: false })
                 formControls.current.setSubmitting?.(false)
