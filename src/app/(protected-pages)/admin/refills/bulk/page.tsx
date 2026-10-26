@@ -399,8 +399,8 @@ export default function BulkRefillPage() {
                                             />
                                         </FormItem>
                                     </div>
-                                    <div className="md:col-span-2 flex items-center">
-                                        <div className="w-full px-3 py-2 bg-gray-100 rounded text-center font-medium">
+                                    <div className="md:col-span-2 flex h-11 items-center">
+                                        <div className="flex h-full w-full items-center justify-center rounded bg-gray-100 px-3 text-center font-medium">
                                             {volumeAdded.toFixed(1)} kg
                                         </div>
                                     </div>
@@ -420,7 +420,7 @@ export default function BulkRefillPage() {
                                             />
                                         </FormItem>
                                     </div>
-                                    <div className="md:col-span-1 flex items-center justify-center">
+                                    <div className="md:col-span-1 flex h-11 items-center justify-center">
                                         <Button
                                             type="button"
                                             variant="plain"

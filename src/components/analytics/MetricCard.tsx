@@ -73,8 +73,8 @@ export default function MetricCard({
       onClick={onClick}
     >
       <div className="p-4 md:p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <p className="text-xs md:text-sm font-medium text-gray-600 mb-1">
               {title}
             </p>
@@ -86,7 +86,7 @@ export default function MetricCard({
               </>
             ) : (
               <>
-                <div className="flex items-baseline gap-2 mb-2">
+                <div className="flex flex-wrap items-baseline gap-x-2 mb-2">
                   <p className="text-xl md:text-2xl font-bold text-gray-900">
                     {value}
                   </p>
@@ -109,7 +109,7 @@ export default function MetricCard({
           
           {icon && (
             <div className={cn(
-              'p-2 md:p-3 rounded-lg',
+              'shrink-0 p-2 md:p-3 rounded-lg',
               iconBgColor
             )}>
               <div className="text-xl md:text-2xl">
