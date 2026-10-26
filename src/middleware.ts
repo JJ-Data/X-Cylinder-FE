@@ -4,10 +4,7 @@ import {
     publicRoutes as _publicRoutes,
 } from '@/configs/routes.config'
 import { REDIRECT_URL_KEY } from '@/constants/app.constant'
-import appConfig, {
-    getRoleBasedPath,
-    CUSTOMER_PORTAL_ENABLED,
-} from '@/configs/app.config'
+import appConfig, { getRoleBasedPath } from '@/configs/app.config'
 import { isValidRoute } from '@/utils/route-validation'
 
 const publicRoutes = Object.entries(_publicRoutes).map(([key]) => key)
@@ -27,16 +24,11 @@ export default auth((req) => {
         isSignedIn,
         auth: req.auth,
         user: req.auth?.user,
-        cookies: req.cookies?.getAll().map((c) => ({
-            name: c.name,
-            value: c.value ? 'present' : 'missing',
-        })),
+        cookies: req.cookies?.getAll().map(c => ({ name: c.name, value: c.value ? 'present' : 'missing' })),
         headers: {
             cookie: req.headers.get('cookie') ? 'present' : 'missing',
-            authorization: req.headers.get('authorization')
-                ? 'present'
-                : 'missing',
-        },
+            authorization: req.headers.get('authorization') ? 'present' : 'missing',
+        }
     })
 
     const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix)
@@ -56,41 +48,21 @@ export default auth((req) => {
         return
     }
 
-    /** Customer portal is switched off: block it, and customer self sign-up with it */
-    const isCustomerArea =
-        nextUrl.pathname === '/customer' ||
-        nextUrl.pathname.startsWith('/customer/') ||
-        nextUrl.pathname === '/sign-up'
-    if (!CUSTOMER_PORTAL_ENABLED && isCustomerArea) {
-        return Response.redirect(
-            new URL(appConfig.unAuthenticatedEntryPath, nextUrl),
-        )
-    }
-
     if (isAuthRoute) {
         if (isSignedIn) {
             /** Redirect to role-based path if signed in & path is auth route */
             const userRole = req.auth?.user?.role || 'customer'
             const roleBasedPath = getRoleBasedPath(userRole)
-            // A signed-in customer can't go to /customer/*, so let the sign-in page
-            // render and sign them out there instead of looping.
-            if (
-                !CUSTOMER_PORTAL_ENABLED &&
-                roleBasedPath.startsWith('/customer')
-            ) {
-                return
-            }
-
-            console.log(
-                '[Middleware] Redirecting authenticated user from auth route:',
-                {
-                    userRole,
-                    roleBasedPath,
-                    timestamp: new Date().toISOString(),
-                },
+            
+            console.log('[Middleware] Redirecting authenticated user from auth route:', {
+                userRole,
+                roleBasedPath,
+                timestamp: new Date().toISOString(),
+            })
+            
+            return Response.redirect(
+                new URL(roleBasedPath, nextUrl),
             )
-
-            return Response.redirect(new URL(roleBasedPath, nextUrl))
         }
         return
     }
@@ -105,7 +77,7 @@ export default auth((req) => {
         // Only include callback URL if it's a valid route
         // This prevents redirecting back to invalid/non-existent routes
         const shouldIncludeCallback = isValidRoute(nextUrl.pathname)
-        const redirectUrl = shouldIncludeCallback
+        const redirectUrl = shouldIncludeCallback 
             ? `${appConfig.unAuthenticatedEntryPath}?${REDIRECT_URL_KEY}=${encodeURIComponent(callbackUrl)}`
             : appConfig.unAuthenticatedEntryPath
 
@@ -117,7 +89,9 @@ export default auth((req) => {
             timestamp: new Date().toISOString(),
         })
 
-        return Response.redirect(new URL(redirectUrl, nextUrl))
+        return Response.redirect(
+            new URL(redirectUrl, nextUrl),
+        )
     }
 
     /** Allow the request to continue */
