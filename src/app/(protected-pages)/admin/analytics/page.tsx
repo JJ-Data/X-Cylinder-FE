@@ -113,9 +113,6 @@ export default function AnalyticsOverviewPage() {
               Comprehensive insights and data analysis for your business
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <PiChartLineDuotone className="text-3xl text-gray-400" />
-          </div>
         </div>
       </div>
 
