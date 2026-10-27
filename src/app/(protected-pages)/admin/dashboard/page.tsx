@@ -416,7 +416,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="lg:col-span-1">
+                <div className="min-w-0 lg:col-span-1">
                     <ActivityFeed
                         activities={recentActivities}
                         loading={isLoading}

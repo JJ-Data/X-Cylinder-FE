@@ -97,18 +97,18 @@ export default function ActivityFeed({
           <Timeline>
             {displayedActivities.map((activity) => (
               <Timeline.Item key={activity.id}>
-                <div className="flex gap-3">
-                  <div className={`p-2 rounded-full ${activityColors[activity.type]}`}>
+                <div className="flex min-w-0 gap-3">
+                  <div className={`shrink-0 p-2 rounded-full ${activityColors[activity.type]}`}>
                     {activityIcons[activity.type]}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
+                        <p className="break-words font-medium text-gray-900">
                           {activity.title}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="mt-1 break-words text-sm text-gray-600">
                           {activity.description}
                         </p>
                         
@@ -136,7 +136,7 @@ export default function ActivityFeed({
                         )}
                       </div>
                       
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                      <span className="shrink-0 whitespace-nowrap text-xs text-gray-500">
                         {format(new Date(activity.timestamp), 'h:mm a')}
                       </span>
                     </div>
